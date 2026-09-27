@@ -34,7 +34,7 @@ jobs:
 
       - name: Build Web
         # Ensure the base-href matches your repo name exactly
-        run: flutter build web --release --base-href "/document-reader/"
+        run: flutter build web --release --base-href "/Document-reader/"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
