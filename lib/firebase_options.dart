@@ -58,18 +58,17 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCKYqXUyFOaC8kHzqyIlSi9EsYGcged-Xc',
-    appId: '1:175578155692:android:e41e2d193e3d0a81ccad09',
+    appId: '1:175578155692:android:0484bcb9adcd93e5ccad09',
     messagingSenderId: '175578155692',
     projectId: 'document-reader-67be4',
     storageBucket: 'document-reader-67be4.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyC0oxkHVIEO5HwrGqGfqqI41XnLrn3Qo48',
-    appId: '1:175578155692:ios:72143e2610083e17ccad09',
+    appId: '1:175578155692:ios:66417da65f3915a8ccad09',
     messagingSenderId: '175578155692',
     projectId: 'document-reader-67be4',
     storageBucket: 'document-reader-67be4.firebasestorage.app',
-    iosBundleId: 'com.example.allDocumentsReader',
+    iosBundleId: 'com.alldocumentreader.app',
   );
 }

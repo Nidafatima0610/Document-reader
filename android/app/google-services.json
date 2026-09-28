@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:175578155692:android:e41e2d193e3d0a81ccad09",
+        "mobilesdk_app_id": "1:175578155692:android:0484bcb9adcd93e5ccad09",
         "android_client_info": {
-          "package_name": "com.example.all_documents_reader"
+          "package_name": "com.alldocumentreader.app"
         }
       },
       "oauth_client": [],
