@@ -1,4 +1,4 @@
-package com.example.all_documents_reader
+package com.alldocumentreader.app
 
 import io.flutter.embedding.android.FlutterActivity
 
