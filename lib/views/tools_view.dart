@@ -1,6 +1,8 @@
 import 'package:all_documents_reader/core/theme/app_theme.dart';
 import 'package:all_documents_reader/models/tool_item_model.dart';
+import 'package:all_documents_reader/services/premium_service.dart';
 import 'package:all_documents_reader/services/tools_registry_service.dart';
+import 'package:all_documents_reader/views/premium_view.dart';
 import 'package:all_documents_reader/views/smart_scanner_view.dart';
 import 'package:all_documents_reader/views/tool_placeholder_view.dart';
 import 'package:all_documents_reader/widgets/banner_ad_widget.dart';
@@ -29,6 +31,18 @@ class _ToolsViewState extends State<ToolsView> {
   }
 
   void _onToolSelected(ToolItemModel tool) {
+    if (tool.isPremium && !PremiumService.instance.isPremium) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PremiumView(
+            highlightBenefitTitle: tool.title,
+          ),
+        ),
+      );
+      return;
+    }
+
     if (tool.routeBuilder != null) {
       Navigator.push(
         context,
@@ -64,6 +78,44 @@ class _ToolsViewState extends State<ToolsView> {
         scrolledUnderElevation: 0,
         leading: const Icon(Icons.construction_rounded),
         actions: [
+          ValueListenableBuilder<bool>(
+            valueListenable: PremiumService.instance.isPremiumNotifier,
+            builder: (context, isPremium, _) {
+              return IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isPremium
+                        ? (isDark ? const Color(0xFF1E3A2B) : const Color(0xFFE8F5E9))
+                        : (isDark ? const Color(0xFF38234B) : const Color(0xFFF3E5F5)),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isPremium
+                          ? const Color(0xFF4CAF50).withValues(alpha: 0.5)
+                          : const Color(0xFFAB47BC).withValues(alpha: 0.5),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Icon(
+                    isPremium
+                        ? Icons.verified_rounded
+                        : Icons.workspace_premium_rounded,
+                    size: 19,
+                    color: isPremium
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFFE91E63),
+                  ),
+                ),
+                tooltip: isPremium ? 'Premium Active' : 'Upgrade to PRO',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PremiumView()),
+                  );
+                },
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
@@ -322,110 +374,156 @@ class _ToolsViewState extends State<ToolsView> {
   }
 
   Widget _buildScannerFeaturedCard(bool isDark) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SmartScannerView()),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isDark
-                  ? [const Color(0xFF5B21B6), const Color(0xFF7C3AED)]
-                  : [const Color(0xFF6D28D9), const Color(0xFF8B5CF6)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: PremiumService.instance.isPremiumNotifier,
+      builder: (context, isPremium, _) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              if (!isPremium) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PremiumView(
+                      highlightBenefitTitle: 'Smart Scanner',
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SmartScannerView(),
+                  ),
+                );
+              }
+            },
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF7C3AED).withValues(alpha: isDark ? 0.35 : 0.25),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [const Color(0xFF5B21B6), const Color(0xFF7C3AED)]
+                      : [const Color(0xFF6D28D9), const Color(0xFF8B5CF6)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
-                child: const Icon(
-                  Icons.document_scanner_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF7C3AED).withValues(
+                      alpha: isDark ? 0.35 : 0.25,
+                    ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.document_scanner_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Smart Scanner',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'NEW',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                        Row(
+                          children: [
+                            const Text(
+                              'Smart Scanner',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'NEW',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isPremium
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xFF8E24AA),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isPremium ? 'UNLOCKED' : 'PRO',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Scan physical documents, crop, clean B&W & run OCR',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Scan physical documents, crop, clean B&W & run OCR',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ),
+                    child: Icon(
+                      isPremium
+                          ? Icons.arrow_forward_rounded
+                          : Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white,
-                  size: 16,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

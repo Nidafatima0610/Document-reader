@@ -71,6 +71,7 @@ class ToolItemModel {
   final String outputFormat;
   final List<String> features;
   final WidgetBuilder? routeBuilder;
+  final bool isPremium;
 
   const ToolItemModel({
     required this.id,
@@ -84,6 +85,7 @@ class ToolItemModel {
     required this.outputFormat,
     this.features = const [],
     this.routeBuilder,
+    this.isPremium = false,
   });
 
   bool get isAvailable => status == ToolStatus.available;

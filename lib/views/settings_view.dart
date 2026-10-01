@@ -2,6 +2,8 @@ import 'package:all_documents_reader/core/config/app_config.dart';
 import 'package:all_documents_reader/core/theme/app_theme.dart';
 import 'package:all_documents_reader/services/premium_service.dart';
 import 'package:all_documents_reader/services/settings_service.dart';
+import 'package:all_documents_reader/views/premium_view.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class SettingsView extends StatefulWidget {
@@ -855,32 +857,26 @@ class _SettingsViewState extends State<SettingsView> {
                                     vertical: 12,
                                   ),
                                 ),
-                                icon: isPurchasing
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.shopping_bag_outlined,
-                                        size: 18,
-                                      ),
-                                label: Text(
-                                  isPurchasing
-                                      ? "Processing..."
-                                      : "Remove Ads",
-                                  style: const TextStyle(
+                                icon: const Icon(
+                                  Icons.workspace_premium_rounded,
+                                  size: 18,
+                                  color: Colors.amberAccent,
+                                ),
+                                label: const Text(
+                                  "Upgrade to PRO",
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13.5,
                                   ),
                                 ),
-                                onPressed: isPurchasing
-                                    ? null
-                                    : () => PremiumService.instance
-                                        .buyRemoveAds(context),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const PremiumView(),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -923,21 +919,21 @@ class _SettingsViewState extends State<SettingsView> {
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 8,
+                        vertical: 10,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
-                        children: const [
-                          Icon(
+                        children: [
+                          const Icon(
                             Icons.check_circle_rounded,
                             color: Color(0xFF4CAF50),
-                            size: 18,
+                            size: 20,
                           ),
-                          SizedBox(width: 8),
-                          Expanded(
+                          const SizedBox(width: 10),
+                          const Expanded(
                             child: Text(
                               "Lifetime License Active • All Ads Removed",
                               maxLines: 1,
@@ -946,6 +942,27 @@ class _SettingsViewState extends State<SettingsView> {
                                 color: Color(0xFF2E7D32),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12.5,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF2E7D32),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const PremiumView(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Details',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -958,6 +975,51 @@ class _SettingsViewState extends State<SettingsView> {
             );
           },
         ),
+        if (kDebugMode) ...[
+          const SizedBox(height: 6),
+          ValueListenableBuilder<bool>(
+            valueListenable: PremiumService.instance.isPremiumNotifier,
+            builder: (context, isPrem, _) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF231A12) : const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.amber.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.bug_report_rounded,
+                      color: Colors.amber,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Developer Testing: Toggle Premium',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: isPrem,
+                      activeThumbColor: Colors.amber,
+                      onChanged: (val) {
+                        PremiumService.instance.setPremiumForTesting(val);
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
         const SizedBox(height: 8),
         _buildCardGroup(
           context,

@@ -625,11 +625,14 @@ void main() {
   );
 
   testWidgets(
-    'Tapping "Merge PDF" in ToolsView opens MergePdfView and displays empty state',
+    'Tapping "Merge PDF" in ToolsView opens MergePdfView when Premium is active',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
+
+      await PremiumService.instance.setPremiumForTesting(true);
+      addTearDown(() => PremiumService.instance.setPremiumForTesting(false));
 
       await tester.pumpWidget(
         MaterialApp(theme: AppTheme.lightTheme, home: const ToolsView()),
@@ -654,11 +657,14 @@ void main() {
   );
 
   testWidgets(
-    'Tapping "Images to PDF" in ToolsView opens ImagesToPdfView and displays empty state',
+    'Tapping "Images to PDF" in ToolsView opens ImagesToPdfView when Premium is active',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
+
+      await PremiumService.instance.setPremiumForTesting(true);
+      addTearDown(() => PremiumService.instance.setPremiumForTesting(false));
 
       await tester.pumpWidget(
         MaterialApp(theme: AppTheme.lightTheme, home: const ToolsView()),
@@ -681,6 +687,30 @@ void main() {
 
       // Back in ToolsView
       expect(find.text('${ToolsRegistryService.instance.getAllTools().length} Tools'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Tapping locked Premium tool opens PremiumView for Free users',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await PremiumService.instance.setPremiumForTesting(false);
+
+      await tester.pumpWidget(
+        MaterialApp(theme: AppTheme.lightTheme, home: const ToolsView()),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap "Merge PDF" tool card as Free user
+      await tester.tap(find.text('Merge PDF'));
+      await tester.pumpAndSettle();
+
+      // Verify PremiumView upgrade screen is displayed
+      expect(find.text('All Documents Reader PRO'), findsOneWidget);
+      expect(find.text('EVERYTHING INCLUDED WITH PRO'), findsOneWidget);
     },
   );
 

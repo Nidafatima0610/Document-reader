@@ -1,7 +1,9 @@
+import 'package:all_documents_reader/services/premium_service.dart';
 import 'package:all_documents_reader/views/ai_document_assistant_view.dart';
 import 'package:all_documents_reader/views/documents_view.dart';
 import 'package:all_documents_reader/views/favorites_view.dart';
 import 'package:all_documents_reader/views/ocr_workspace_view.dart';
+import 'package:all_documents_reader/views/premium_view.dart';
 import 'package:all_documents_reader/views/recent_documents_view.dart';
 import 'package:all_documents_reader/views/settings_view.dart';
 import 'package:all_documents_reader/views/smart_scanner_view.dart';
@@ -68,20 +70,42 @@ class _HomeViewState extends State<HomeView> {
               });
             },
             onOpenScanner: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SmartScannerView(),
-                ),
-              );
+              if (!PremiumService.instance.isPremium) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PremiumView(
+                      highlightBenefitTitle: 'Smart Scanner',
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SmartScannerView(),
+                  ),
+                );
+              }
             },
             onOpenOcr: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const OcrWorkspaceView(),
-                ),
-              );
+              if (!PremiumService.instance.isPremium) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PremiumView(
+                      highlightBenefitTitle: 'OCR Workspace',
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OcrWorkspaceView(),
+                  ),
+                );
+              }
             },
             onOpenAiAssistant: () {
               Navigator.push(

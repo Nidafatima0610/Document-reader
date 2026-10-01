@@ -383,12 +383,16 @@ class AdMobService {
 
   /// Shows the Rewarded Ad if available.
   ///
-  /// Returns `true` only if the user actually completed the ad and earned the reward.
-  /// Returns `false` if the ad failed to load, failed to show, or was dismissed early.
   Future<bool> showRewardedAd({
     required BuildContext context,
     required String rewardReason,
   }) async {
+    // Premium users bypass all ads and automatically receive perks
+    if (PremiumService.instance.isPremium) {
+      debugPrint('[AdMobService] User is Premium. Rewarded ad bypassed and perk granted ($rewardReason).');
+      return true;
+    }
+
     // If running in widget/unit tests or unsupported environment, allow test execution
     if (!_isPlatformSupported) {
       debugPrint('[AdMobService] Platform unsupported or FLUTTER_TEST. Bypassing native ad in test mode.');
