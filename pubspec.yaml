@@ -50,6 +50,9 @@ dependencies:
   change_package_name: ^1.1.1
   change_app_package_name: ^1.5.0
   flutter_launcher_icons: ^0.14.4
+  camera: ^0.12.1
+  share_plus: ^13.3.0
+  permission_handler: ^13.0.2
 
 dev_dependencies:
   flutter_test:

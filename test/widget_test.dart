@@ -37,6 +37,7 @@ import 'package:all_documents_reader/views/smart_scanner_view.dart';
 import 'package:all_documents_reader/views/split_pdf_view.dart';
 import 'package:all_documents_reader/views/text_to_pdf_view.dart';
 import 'package:all_documents_reader/views/tools_view.dart';
+import 'package:all_documents_reader/views/scan_to_pdf_workspace_view.dart';
 import 'package:all_documents_reader/views/word_converter_view.dart';
 import 'package:all_documents_reader/widgets/documents_body.dart';
 import 'package:flutter/material.dart';
@@ -941,21 +942,22 @@ void main() {
     expect(result.generatedFiles.first.path.endsWith('.png'), isTrue);
   });
 
-  test('ToolsRegistryService registers all 16 tools with working routes', () {
+  test('ToolsRegistryService registers all tools including scan_to_pdf with working routes', () {
     final allDefinitions = ToolsRegistryService.instance.allRegisteredTools;
-    expect(allDefinitions.length, 16);
+    expect(allDefinitions.length, 17);
 
     final ids = allDefinitions.map((t) => t.id).toSet();
     expect(ids.contains('ai_document_assistant'), isTrue);
     expect(ids.contains('ocr_workspace'), isTrue);
     expect(ids.contains('smart_scanner'), isTrue);
+    expect(ids.contains('scan_to_pdf'), isTrue);
 
     final activeTools = ToolsRegistryService.instance.getAllTools();
     if (!AppConfig.isAiFeatureEnabled) {
-      expect(activeTools.length, 15);
+      expect(activeTools.length, 16);
       expect(activeTools.any((t) => t.id == 'ai_document_assistant'), isFalse);
     } else {
-      expect(activeTools.length, 16);
+      expect(activeTools.length, 17);
       expect(activeTools.any((t) => t.id == 'ai_document_assistant'), isTrue);
     }
 
@@ -1834,11 +1836,11 @@ Flutter, Dart, Mobile Architecture, State Management, Git, REST APIs
     expect(AppConfig.isAiFeatureEnabled, isFalse);
 
     final allTools = ToolsRegistryService.instance.allRegisteredTools;
-    expect(allTools.length, 16);
+    expect(allTools.length, 17);
     expect(allTools.any((t) => t.id == 'ai_document_assistant'), isTrue);
 
     final activeTools = ToolsRegistryService.instance.getAllTools();
-    expect(activeTools.length, 15);
+    expect(activeTools.length, 16);
     expect(activeTools.any((t) => t.id == 'ai_document_assistant'), isFalse);
   });
 
@@ -2003,6 +2005,26 @@ Flutter, Dart, Mobile Architecture, State Management, Git, REST APIs
     expect(find.text('Quality:'), findsOneWidget);
     expect(find.text('Standard'), findsOneWidget);
     expect(find.text('Studio HD'), findsOneWidget);
+  });
+
+  testWidgets('ScanToPdfWorkspaceView renders empty state and action buttons', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const ScanToPdfWorkspaceView(initialPages: []),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Scan to PDF'), findsOneWidget);
+    expect(find.text('Open Camera Scanner'), findsOneWidget);
+    expect(find.text('Import from Gallery'), findsOneWidget);
   });
 }
 

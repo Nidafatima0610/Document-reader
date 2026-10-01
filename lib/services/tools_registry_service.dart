@@ -10,6 +10,7 @@ import 'package:all_documents_reader/views/pdf_to_image_view.dart';
 import 'package:all_documents_reader/views/pdf_to_text_view.dart';
 import 'package:all_documents_reader/views/reorder_pdf_view.dart';
 import 'package:all_documents_reader/views/rotate_pdf_view.dart';
+import 'package:all_documents_reader/views/scan_to_pdf_workspace_view.dart';
 import 'package:all_documents_reader/views/smart_scanner_view.dart';
 import 'package:all_documents_reader/views/split_pdf_view.dart';
 import 'package:all_documents_reader/views/text_to_pdf_view.dart';
@@ -43,6 +44,27 @@ class ToolsRegistryService {
         'Interactive manual boundary crop with A4 presets',
         'Real document enhancement filters (Original, Grayscale, B&W, Enhanced)',
         'Compile into searchable/sharable PDF and extract text with on-device OCR',
+      ],
+    ),
+    ToolItemModel(
+      id: 'scan_to_pdf',
+      title: 'Scan to PDF',
+      description: 'Scan documents with camera, crop, enhance filters & export PDF',
+      category: ToolCategory.create,
+      icon: Icons.document_scanner_rounded,
+      accentColor: const Color(0xFF7046A8),
+      status: ToolStatus.available,
+      isPremium: false,
+      supportedInputFormats: const ['Camera', 'JPG', 'PNG'],
+      outputFormat: 'PDF',
+      routeBuilder: (context) => const ScanToPdfWorkspaceView(),
+      features: const [
+        'Multi-page physical document camera capture with live preview reticle',
+        'Interactive manual crop with A4, ID card, and full-page presets',
+        'Document filters (Original, Enhanced, Black & White, Grayscale)',
+        'Rotate, reorder, delete, and retake scanned pages easily',
+        'Custom PDF naming and direct export to Documents storage',
+        'Instant PDF opening and native sharing',
       ],
     ),
     ToolItemModel(
