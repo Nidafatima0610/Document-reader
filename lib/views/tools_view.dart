@@ -31,17 +31,7 @@ class _ToolsViewState extends State<ToolsView> {
   }
 
   void _onToolSelected(ToolItemModel tool) {
-    if (tool.isPremium && !PremiumService.instance.isPremium) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PremiumView(
-            highlightBenefitTitle: tool.title,
-          ),
-        ),
-      );
-      return;
-    }
+
 
     if (tool.routeBuilder != null) {
       Navigator.push(

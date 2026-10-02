@@ -27,7 +27,6 @@ class ToolCard extends StatelessWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: PremiumService.instance.isPremiumNotifier,
       builder: (context, isUserPremium, _) {
-        final isLocked = tool.isPremium && !isUserPremium;
 
         return Card(
           color: cardBg,
@@ -36,12 +35,10 @@ class ToolCard extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: isLocked
-                  ? const Color(0xFF7046A8).withValues(alpha: isDark ? 0.3 : 0.18)
-                  : (isDark
+              color: isDark
                       ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.04)),
-              width: isLocked ? 1.2 : 1,
+                      : Colors.black.withValues(alpha: 0.04),
+              width: 1,
             ),
           ),
           child: InkWell(
@@ -133,25 +130,11 @@ class ToolCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (isLocked)
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF7046A8).withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.lock_rounded,
-                            size: 13,
-                            color: Color(0xFF7046A8),
-                          ),
-                        )
-                      else
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 14,
-                          color: descColor.withValues(alpha: 0.7),
-                        ),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                        color: descColor.withValues(alpha: 0.7),
+                      ),
                     ],
                   ),
                 ],
