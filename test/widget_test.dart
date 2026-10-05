@@ -39,6 +39,13 @@ import 'package:all_documents_reader/views/text_to_pdf_view.dart';
 import 'package:all_documents_reader/views/tools_view.dart';
 import 'package:all_documents_reader/views/scan_to_pdf_workspace_view.dart';
 import 'package:all_documents_reader/views/word_converter_view.dart';
+import 'package:all_documents_reader/views/career_view.dart';
+import 'package:all_documents_reader/views/career_resume_builder_view.dart';
+import 'package:all_documents_reader/views/career_cover_letter_view.dart';
+import 'package:all_documents_reader/views/career_reference_letter_view.dart';
+import 'package:all_documents_reader/services/career_pdf_service.dart';
+import 'package:all_documents_reader/models/career_models.dart';
+import 'package:all_documents_reader/widgets/home_bottom_navigation.dart';
 import 'package:all_documents_reader/widgets/documents_body.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -72,11 +79,11 @@ void main() {
     // Verify header
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('All Documents Reader'), findsWidgets);
-    expect(find.text('PRO'), findsOneWidget);
+    expect(find.text('PRO'), findsNothing);
 
-    // Verify sections
-    expect(find.text('Premium & Monetization'), findsOneWidget);
-    expect(find.text('Remove Ads & Go Premium'), findsOneWidget);
+    // Verify sections (Premium is hidden for this build)
+    expect(find.text('Premium & Monetization'), findsNothing);
+    expect(find.text('Remove Ads & Go Premium'), findsNothing);
     expect(find.text('Appearance & Theme'), findsOneWidget);
     expect(find.text('Reading Preferences'), findsOneWidget);
     expect(find.text('Storage & File Management'), findsOneWidget);
@@ -301,8 +308,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Navigate to Documents Tab (Index 1)
-      await tester.tap(find.text('Documents'));
+      // Navigate to Documents by tapping "Images" category card on Home
+      await tester.tap(find.text('Images'));
       await tester.pumpAndSettle();
 
       // Find star IconButton on the first document card and tap it
@@ -312,8 +319,12 @@ void main() {
       await tester.tap(cardStarButton);
       await tester.pumpAndSettle();
 
+      // Return to HomeView
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
       // Now navigate to Favorites Tab (Index 3)
-      await tester.tap(find.text('Favorites'));
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Favorites'));
       await tester.pumpAndSettle();
 
       // Verify "Favorites" AppBar and the favorited document is displayed
@@ -404,12 +415,19 @@ void main() {
       expect(find.text('Recent Documents'), findsWidgets);
       expect(find.text('No Recent Documents'), findsOneWidget);
 
-      // Navigate to Documents tab and open a sample document
-      await tester.tap(find.text('Documents'));
+      // Navigate back to Home, then to Documents by tapping "Images" category card
+      await tester.tap(find.text('Home'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Images'));
       await tester.pumpAndSettle();
 
       // Tap first document card to trigger open & record history
       await tester.tap(find.text('Vacation Photo.jpg'));
+      await tester.pumpAndSettle();
+
+      // Return to Home
+      await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
 
       // Navigate back to Recent Tab
@@ -692,26 +710,25 @@ void main() {
   );
 
   testWidgets(
-    'Tapping locked Premium tool opens PremiumView for Free users',
+    'Tapping tool opens feature directly without Premium paywall for users',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
-
-      await PremiumService.instance.setPremiumForTesting(false);
 
       await tester.pumpWidget(
         MaterialApp(theme: AppTheme.lightTheme, home: const ToolsView()),
       );
       await tester.pumpAndSettle();
 
-      // Tap "Merge PDF" tool card as Free user
+      // Tap "Merge PDF" tool card
       await tester.tap(find.text('Merge PDF'));
       await tester.pumpAndSettle();
 
-      // Verify PremiumView upgrade screen is displayed
-      expect(find.text('All Documents Reader PRO'), findsOneWidget);
-      expect(find.text('EVERYTHING INCLUDED WITH PRO'), findsOneWidget);
+      // Verify tool opens directly without any PremiumView upgrade screen
+      expect(find.text('All Documents Reader PRO'), findsNothing);
+      expect(find.text('EVERYTHING INCLUDED WITH PRO'), findsNothing);
+      expect(find.text('Select PDFs to Merge'), findsOneWidget);
     },
   );
 
@@ -1953,25 +1970,22 @@ Flutter, Dart, Mobile Architecture, State Management, Git, REST APIs
     expect(premium.isPremium, isFalse);
   });
 
-  testWidgets('SettingsView displays active badge when Premium is active', (
+  testWidgets('SettingsView does not display any Premium UI in this build', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
 
-    await PremiumService.instance.setPremiumForTesting(true);
-
     await tester.pumpWidget(
       MaterialApp(theme: AppTheme.lightTheme, home: const SettingsView()),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Premium Active'), findsOneWidget);
-    expect(find.text('Lifetime License Active • All Ads Removed'), findsOneWidget);
-    expect(find.text('Remove Ads'), findsNothing);
-
-    await PremiumService.instance.setPremiumForTesting(false);
+    expect(find.text('Premium Active'), findsNothing);
+    expect(find.text('Remove Ads & Go Premium'), findsNothing);
+    expect(find.text('PRO'), findsNothing);
+    expect(find.text('Lifetime License Active • All Ads Removed'), findsNothing);
   });
 
   testWidgets('CompressPdfView allows selecting Standard and Deep Compression', (
@@ -2025,6 +2039,238 @@ Flutter, Dart, Mobile Architecture, State Management, Git, REST APIs
     expect(find.text('Scan to PDF'), findsOneWidget);
     expect(find.text('Open Camera Scanner'), findsOneWidget);
     expect(find.text('Import from Gallery'), findsOneWidget);
+  });
+
+  testWidgets('CareerView renders header, subtitle, and 3 career builder cards', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.lightTheme, home: const CareerView()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Career Documents'), findsOneWidget);
+    expect(
+      find.text('Create professional documents for your career.'),
+      findsOneWidget,
+    );
+    expect(find.text('CV / Resume Builder'), findsOneWidget);
+    expect(find.text('Cover Letter'), findsOneWidget);
+    expect(find.text('Reference Letter'), findsOneWidget);
+  });
+
+  testWidgets('HomeBottomNavigation renders 6 items in correct order', (
+    WidgetTester tester,
+  ) async {
+    int selected = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: Scaffold(
+          bottomNavigationBar: HomeBottomNavigation(
+            selectedIndex: selected,
+            onDestinationSelected: (idx) => selected = idx,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Recent'), findsOneWidget);
+    expect(find.text('Tools'), findsOneWidget);
+    expect(find.text('Favorites'), findsOneWidget);
+    expect(find.text('Career'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+  });
+
+  test('CareerPdfService generates valid PDF files for CV, Cover Letter, and Reference Letter', () async {
+    final tempDir = Directory.systemTemp.createTempSync('career_pdf_test_');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
+
+    // Test Resume PDF
+    final resume = ResumeData(
+      fullName: 'Alex Morgan',
+      professionalTitle: 'Lead Software Architect',
+      phone: '+1 (555) 234-5678',
+      email: 'alex.morgan@example.com',
+      location: 'San Francisco, CA',
+      linkedIn: 'linkedin.com/in/alexmorgan',
+      website: 'alexmorgan.dev',
+      summary: 'Experienced architect specializing in scalable distributed systems.',
+      experiences: [
+        WorkExperience(
+          jobTitle: 'Staff Engineer',
+          company: 'Tech Corp',
+          startDate: '2021',
+          endDate: 'Present',
+          description: 'Architected microservices handling 100k req/sec.',
+        ),
+      ],
+      education: [
+        EducationItem(
+          degree: 'B.S. Computer Science',
+          institution: 'Stanford University',
+          startYear: '2016',
+          endYear: '2020',
+        ),
+      ],
+      skills: ['Flutter', 'Dart', 'Kotlin', 'Distributed Systems'],
+      projects: [
+        ProjectItem(
+          name: 'All Documents Reader',
+          description: 'Offline multi-format reader with PDF utilities.',
+          technologies: 'Flutter, Dart',
+        ),
+      ],
+      certifications: [
+        CertificationItem(
+          name: 'AWS Solutions Architect Professional',
+          organization: 'Amazon Web Services',
+          date: '2023',
+        ),
+      ],
+      languages: [
+        LanguageItem(language: 'English', proficiency: 'Native'),
+      ],
+    );
+
+    final resumeFile = await CareerPdfService.instance.generateResumePdf(
+      resume,
+      customOutputDir: tempDir.path,
+    );
+    expect(resumeFile.existsSync(), isTrue);
+    expect(resumeFile.lengthSync(), greaterThan(100));
+
+    // Test Cover Letter PDF
+    final coverLetter = CoverLetterData(
+      applicantName: 'Alex Morgan',
+      email: 'alex.morgan@example.com',
+      phone: '+1 (555) 234-5678',
+      address: 'San Francisco, CA',
+      companyName: 'Acme Innovations',
+      hiringManagerName: 'Hiring Team',
+      jobTitle: 'Senior Flutter Developer',
+      jobReference: 'REQ-2026',
+      date: 'October 5, 2026',
+      introduction: 'I am writing to express my strong interest in the Senior Flutter Developer position.',
+      skillsExperience: 'Over 6 years of mobile engineering experience building scalable apps.',
+      whyInterested: 'Acme Innovations is renowned for high standards in software architecture.',
+      closingMessage: 'Thank you for your time and consideration. I look forward to speaking with you.',
+    );
+
+    final coverLetterFile = await CareerPdfService.instance.generateCoverLetterPdf(
+      coverLetter,
+      customOutputDir: tempDir.path,
+    );
+    expect(coverLetterFile.existsSync(), isTrue);
+    expect(coverLetterFile.lengthSync(), greaterThan(100));
+
+    // Test Reference Letter PDF
+    final refLetter = ReferenceLetterData(
+      refereeName: 'Dr. Jane Doe',
+      refereePosition: 'VP of Engineering',
+      organization: 'Tech Corp',
+      applicantName: 'Alex Morgan',
+      applicantPosition: 'Staff Engineer',
+      relationship: 'Direct Supervisor',
+      durationKnown: '4 years',
+      strengthsSkills: 'System design, reliability, cross-functional leadership',
+      professionalQualities: 'Exceptional work ethic, meticulous problem solving, and mentorship',
+      additionalComments: 'I give Alex my highest recommendation without reservation.',
+      contactInfo: 'jane.doe@techcorp.com | (555) 987-6543',
+      date: 'October 5, 2026',
+    );
+
+    final refLetterFile = await CareerPdfService.instance.generateReferenceLetterPdf(
+      refLetter,
+      customOutputDir: tempDir.path,
+    );
+    expect(refLetterFile.existsSync(), isTrue);
+    expect(refLetterFile.lengthSync(), greaterThan(100));
+  });
+
+  testWidgets('CareerResumeBuilderView renders personal information and sections', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const CareerResumeBuilderView(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('CV / Resume Builder'), findsOneWidget);
+    expect(find.text('Personal Information'), findsOneWidget);
+    expect(find.text('Professional Summary'), findsOneWidget);
+    expect(find.text('Work Experience'), findsOneWidget);
+    expect(find.text('Education'), findsOneWidget);
+    expect(find.byTooltip('Add Experience'), findsOneWidget);
+    expect(find.byTooltip('Add Education'), findsOneWidget);
+  });
+
+  testWidgets('CareerCoverLetterView renders and loads standard template', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.lightTheme, home: const CareerCoverLetterView()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cover Letter Generator'), findsOneWidget);
+    expect(find.text('Load Template'), findsOneWidget);
+
+    // Tap template loader
+    await tester.tap(find.text('Load Template'));
+    await tester.pump();
+
+    // Verify feedback SnackBar
+    expect(
+      find.text('Standard template loaded. You can customize paragraphs below.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('CareerReferenceLetterView renders and loads standard template', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const CareerReferenceLetterView(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reference Letter Generator'), findsOneWidget);
+    expect(find.text('Load Template'), findsOneWidget);
+
+    // Tap template loader
+    await tester.tap(find.text('Load Template'));
+    await tester.pump();
+
+    // Verify feedback SnackBar
+    expect(
+      find.text('Recommendation template loaded. You can customize paragraphs below.'),
+      findsOneWidget,
+    );
   });
 }
 

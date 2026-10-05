@@ -24,9 +24,9 @@ class HomeBottomNavigation extends StatelessWidget {
           selectedIcon: Icon(Icons.home_rounded, size: 22),
         ),
         NavigationDestination(
-          icon: Icon(Icons.folder_outlined, size: 22),
-          label: "Documents",
-          selectedIcon: Icon(Icons.folder_rounded, size: 22),
+          icon: Icon(Icons.history_outlined, size: 22),
+          label: "Recent",
+          selectedIcon: Icon(Icons.history_rounded, size: 22),
         ),
         NavigationDestination(
           icon: Icon(Icons.construction_outlined, size: 22),
@@ -34,14 +34,14 @@ class HomeBottomNavigation extends StatelessWidget {
           selectedIcon: Icon(Icons.construction_rounded, size: 22),
         ),
         NavigationDestination(
-          icon: Icon(Icons.history_outlined, size: 22),
-          label: "Recent",
-          selectedIcon: Icon(Icons.history_rounded, size: 22),
-        ),
-        NavigationDestination(
           icon: Icon(Icons.star_outline_rounded, size: 22),
           label: "Favorites",
           selectedIcon: Icon(Icons.star_rounded, size: 22),
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.work_outline_rounded, size: 22),
+          label: "Career",
+          selectedIcon: Icon(Icons.work_rounded, size: 22),
         ),
         NavigationDestination(
           icon: Icon(Icons.settings_outlined, size: 22),

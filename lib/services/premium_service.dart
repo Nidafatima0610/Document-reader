@@ -160,14 +160,19 @@ class PremiumService {
     return Platform.isAndroid || Platform.isIOS;
   }
 
-  // ===========================================================================
-  // INITIALIZATION & CACHE
-  // ===========================================================================
+  /// Global toggle allowing complete temporary disabling of the Premium/billing subsystem
+  static const bool isPremiumFeatureEnabled = false;
 
   /// Initializes the Premium service, restores cached entitlement, and sets up
   /// Google Play purchase stream listeners.
   Future<void> init() async {
     if (_isInitialized) return;
+
+    if (!isPremiumFeatureEnabled) {
+      debugPrint('[PremiumService] Premium feature disabled for this build.');
+      _isInitialized = true;
+      return;
+    }
 
     // 1. Load cached entitlement and active plan from SharedPreferences
     try {

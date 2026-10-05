@@ -1,6 +1,4 @@
 import 'package:all_documents_reader/core/theme/app_theme.dart';
-import 'package:all_documents_reader/services/premium_service.dart';
-import 'package:all_documents_reader/views/premium_view.dart';
 import 'package:flutter/material.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -82,49 +80,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        ValueListenableBuilder<bool>(
-          valueListenable: PremiumService.instance.isPremiumNotifier,
-          builder: (context, isPremium, _) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PremiumView(),
-                    ),
-                  );
-                },
-                icon: Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: isPremium
-                        ? (isDark ? const Color(0xFF1E3A2B) : const Color(0xFFE8F5E9))
-                        : (isDark ? const Color(0xFF38234B) : const Color(0xFFF3E5F5)),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isPremium
-                          ? const Color(0xFF4CAF50).withValues(alpha: 0.5)
-                          : const Color(0xFFAB47BC).withValues(alpha: 0.5),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Icon(
-                    isPremium
-                        ? Icons.verified_rounded
-                        : Icons.workspace_premium_rounded,
-                    size: 19,
-                    color: isPremium
-                        ? const Color(0xFF4CAF50)
-                        : const Color(0xFFE91E63),
-                  ),
-                ),
-                tooltip: isPremium ? "Premium Active" : "Upgrade to PRO",
-              ),
-            );
-          },
-        ),
         Padding(
           padding: const EdgeInsets.only(right: 6),
           child: IconButton(

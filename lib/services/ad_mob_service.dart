@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:all_documents_reader/views/premium_view.dart';
 import 'premium_service.dart';
 
 /// Service managing Google Mobile Ads (AdMob) integration.
@@ -322,26 +321,6 @@ class AdMobService {
         ad.dispose();
         _interstitialAd = null;
         loadInterstitialAd();
-
-        if (context != null && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Tired of ads? Get a seamless experience.'),
-              behavior: SnackBarBehavior.floating,
-              action: SnackBarAction(
-                label: 'Go Premium',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PremiumView(),
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-        }
 
         if (!completer.isCompleted) completer.complete(true);
       },
