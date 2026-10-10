@@ -5,7 +5,6 @@ import 'package:all_documents_reader/models/documents_model.dart';
 import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/settings_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 
 /// Supported types of AI document processing
 enum AiAnalysisType {
@@ -987,13 +986,7 @@ class AiDocumentService {
     if (outputDirectory != null) {
       saveDir = outputDirectory;
     } else {
-      try {
-        saveDir = await getApplicationDocumentsDirectory().timeout(
-          const Duration(seconds: 1),
-        );
-      } catch (_) {
-        saveDir = Directory.systemTemp;
-      }
+      saveDir = await DocumentsStorageService.instance.getAppDocumentsDirectory();
     }
 
     if (!saveDir.existsSync()) {

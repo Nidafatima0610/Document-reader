@@ -4,7 +4,7 @@ import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/pdf_operations_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
+import 'package:all_documents_reader/widgets/generated_pdf_success_sheet.dart';
 
 /// Screen allowing users to visually reorder pages of a PDF and delete unwanted pages
 class ReorderPdfView extends StatefulWidget {
@@ -168,128 +168,20 @@ class _ReorderPdfViewState extends State<ReorderPdfView> {
   }
 
   void _showSuccessDialog(DocumentsModel document, PdfOperationResult result) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    showDialog(
+    GeneratedPdfSuccessSheet.show(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32).withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle_rounded,
-                color: Color(0xFF2E7D32),
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Pages Reordered Successfully!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF2D2435),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your reordered PDF has been created and saved to Documents.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2C2536) : const Color(0xFFF3EDF9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.picture_as_pdf_rounded,
-                    color: Color(0xFFD32F2F),
-                    size: 28,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          result.fileName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${result.pageCount} pages • ${result.formattedSize}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.grey[300] : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await AdMobService.instance.showInterstitialAd(
-                context: context,
-                triggerReason: 'reorder_pdf_done',
-              );
-              if (mounted) {
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Done'),
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.visibility_outlined, size: 18),
-            label: const Text('Open PDF'),
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              DocumentsStorageService.instance.recordDocumentOpened(document);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PdfViewerScreen(
-                    file: result.file,
-                    title: document.name,
-                    document: document,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+      document: document,
+      file: result.file,
+      subtitle: '${result.pageCount} pages • ${result.formattedSize}',
+      onDone: () async {
+        await AdMobService.instance.showInterstitialAd(
+          context: context,
+          triggerReason: 'reorder_pdf_done',
+        );
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      },
     );
   }
 

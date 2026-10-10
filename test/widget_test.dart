@@ -282,15 +282,15 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
     await tester.pumpAndSettle();
 
-    // Tap Delete in menu
-    await tester.tap(find.text('Delete'));
+    // Tap Remove from App in menu
+    await tester.tap(find.text('Remove from App'));
     await tester.pumpAndSettle();
 
     // Verify dialog appears
-    expect(find.text('Delete Document'), findsOneWidget);
+    expect(find.text('Remove from App'), findsWidgets);
 
-    // Confirm deletion
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+    // Confirm removal
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Remove from App'));
     await tester.pumpAndSettle();
 
     expect(deleted, isTrue);
@@ -498,11 +498,11 @@ void main() {
       expect(storage.isFavorite(customDoc), isTrue);
 
       // Test Delete action
-      await tester.tap(find.text('Delete Document'));
+      await tester.tap(find.text('Delete File'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Delete Document'), findsWidgets);
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+      expect(find.text('Delete Permanently'), findsWidgets);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete Permanently'));
       await tester.pumpAndSettle();
 
       expect(deletedFromCallback, isTrue);

@@ -6,7 +6,7 @@ import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/pdf_generator_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
+import 'package:all_documents_reader/widgets/generated_pdf_success_sheet.dart';
 
 /// Screen allowing users to select, preview, reorder images and convert them into a real PDF
 class ImagesToPdfView extends StatefulWidget {
@@ -268,154 +268,19 @@ class _ImagesToPdfViewState extends State<ImagesToPdfView> {
   }
 
   void _showSuccessDialog(DocumentsModel document, PdfGenerationResult result) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    showDialog(
+    GeneratedPdfSuccessSheet.show(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          contentPadding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Success Icon
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2E7D32).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.check_circle_rounded,
-                    color: Color(0xFF2E7D32),
-                    size: 40,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'PDF Created Successfully!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF2D2435),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Your PDF has been saved and added to your Documents list.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // File info card
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF2C2536)
-                      : const Color(0xFFF3EDF9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.picture_as_pdf_rounded,
-                          color: Color(0xFFD32F2F),
-                          size: 24,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            result.fileName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${result.pageCount} ${result.pageCount == 1 ? "page" : "pages"}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.grey[300] : Colors.grey[700],
-                          ),
-                        ),
-                        Text(
-                          result.formattedSize,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.grey[300] : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(dialogContext); // Close dialog
-                await AdMobService.instance.showInterstitialAd(
-                  context: context,
-                  triggerReason: 'images_to_pdf_done',
-                );
-                if (mounted) {
-                  Navigator.pop(context); // Return to Tools
-                }
-              },
-              child: const Text('Done'),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.visibility_outlined, size: 18),
-              label: const Text('Open PDF'),
-              onPressed: () {
-                Navigator.pop(dialogContext); // Close dialog
-
-                // Record to Recent Documents
-                DocumentsStorageService.instance.recordDocumentOpened(document);
-
-                // Open in PDF Viewer
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PdfViewerScreen(
-                      file: result.file,
-                      title: document.name,
-                      document: document,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
+      document: document,
+      file: result.file,
+      subtitle: '${result.pageCount} ${result.pageCount == 1 ? "page" : "pages"} • ${result.formattedSize}',
+      onDone: () async {
+        await AdMobService.instance.showInterstitialAd(
+          context: context,
+          triggerReason: 'images_to_pdf_done',
         );
+        if (mounted) {
+          Navigator.pop(context); // Return to Tools
+        }
       },
     );
   }

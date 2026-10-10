@@ -3,7 +3,10 @@ import 'package:all_documents_reader/models/documents_model.dart';
 import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/settings_service.dart';
 import 'package:flutter/material.dart';
+import 'package:all_documents_reader/services/document_save_service.dart';
+import 'package:all_documents_reader/widgets/document_action_dialogs.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 /// Unified production PDF Viewer screen honoring user reading preferences,
@@ -234,7 +237,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                     ),
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert),
-                    onSelected: (value) {
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    onSelected: (value) async {
                       switch (value) {
                         case 'fullscreen':
                           setState(() {
@@ -247,15 +253,82 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                         case 'jump':
                           _showJumpToPageDialog();
                           break;
+                        case 'save':
+                          await DocumentSaveService.instance.saveDocumentToDevice(
+                            context: context,
+                            sourceFile: widget.file,
+                            defaultFileName: widget.title.endsWith('.pdf') ? widget.title : '${widget.title}.pdf',
+                          );
+                          break;
+                        case 'share':
+                          try {
+                            // ignore: deprecated_member_use
+                            await Share.shareXFiles(
+                              [XFile(widget.file.path)],
+                              subject: widget.title,
+                            );
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to share: $e'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                          break;
+                        case 'remove':
+                          if (widget.document != null) {
+                            final removed = await DocumentActionDialogs.showRemoveFromAppDialog(
+                              context: context,
+                              document: widget.document!,
+                            );
+                            if (removed == true && context.mounted) {
+                              Navigator.pop(context, true);
+                            }
+                          }
+                          break;
+                        case 'delete':
+                          if (widget.document != null) {
+                            final deleted = await DocumentActionDialogs.showDeletePermanentlyDialog(
+                              context: context,
+                              document: widget.document!,
+                            );
+                            if (deleted == true && context.mounted) {
+                              Navigator.pop(context, true);
+                            }
+                          }
+                          break;
                       }
                     },
                     itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'save',
+                        child: Row(
+                          children: [
+                            Icon(Icons.save_alt_rounded, size: 20),
+                            SizedBox(width: 10),
+                            Text('Save to Device'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'share',
+                        child: Row(
+                          children: [
+                            Icon(Icons.share_outlined, size: 20),
+                            SizedBox(width: 10),
+                            Text('Share'),
+                          ],
+                        ),
+                      ),
                       PopupMenuItem(
                         value: 'fullscreen',
                         child: Row(
                           children: [
-                            Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
-                            const SizedBox(width: 8),
+                            Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen, size: 20),
+                            const SizedBox(width: 10),
                             Text(_isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'),
                           ],
                         ),
@@ -264,8 +337,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                         value: 'external',
                         child: Row(
                           children: [
-                            Icon(Icons.open_in_new),
-                            SizedBox(width: 8),
+                            Icon(Icons.open_in_new, size: 20),
+                            SizedBox(width: 10),
                             Text('Open with external app'),
                           ],
                         ),
@@ -275,12 +348,35 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                           value: 'jump',
                           child: Row(
                             children: [
-                              Icon(Icons.format_list_numbered),
-                              SizedBox(width: 8),
+                              Icon(Icons.format_list_numbered, size: 20),
+                              SizedBox(width: 10),
                               Text('Jump to page'),
                             ],
                           ),
                         ),
+                      if (widget.document != null) ...[
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'remove',
+                          child: Row(
+                            children: [
+                              Icon(Icons.remove_circle_outline_rounded, size: 20),
+                              SizedBox(width: 10),
+                              Text('Remove from App'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_forever_rounded, color: Colors.red.shade700, size: 20),
+                              SizedBox(width: 10),
+                              Text('Delete File Permanently', style: TextStyle(color: Colors.red.shade700)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],

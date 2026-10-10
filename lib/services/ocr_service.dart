@@ -4,7 +4,6 @@ import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:path_provider/path_provider.dart';
 
 /// Structured outcome of an OCR recognition process
 class OcrResult {
@@ -87,13 +86,7 @@ class OcrService {
     if (outputDirectory != null) {
       saveDir = outputDirectory;
     } else {
-      try {
-        saveDir = await getApplicationDocumentsDirectory().timeout(
-          const Duration(seconds: 1),
-        );
-      } catch (_) {
-        saveDir = Directory.systemTemp;
-      }
+      saveDir = await DocumentsStorageService.instance.getAppDocumentsDirectory();
     }
 
     if (!saveDir.existsSync()) {

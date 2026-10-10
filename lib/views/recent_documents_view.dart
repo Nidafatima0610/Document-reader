@@ -7,6 +7,7 @@ import 'package:all_documents_reader/views/document_details_view.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
+import 'package:all_documents_reader/widgets/document_action_dialogs.dart';
 
 class RecentDocumentsView extends StatefulWidget {
   final VoidCallback? onBrowseDocuments;
@@ -795,104 +796,40 @@ class _RecentDocumentsViewState extends State<RecentDocumentsView> {
                                                       : Colors.grey[600],
                                                   size: 20,
                                                 ),
-                                                onSelected: (value) {
+                                                onSelected: (value) async {
                                                   if (value == 'open') {
                                                     _openDocument(document);
-                                                  } else if (value ==
-                                                      'details') {
+                                                  } else if (value == 'details') {
                                                     Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
                                                         builder: (context) =>
                                                             DocumentDetailsView(
-                                                              document:
-                                                                  document,
+                                                              document: document,
                                                             ),
                                                       ),
                                                     );
-                                                  } else if (value ==
-                                                      'favorite') {
-                                                    _handleToggleFavorite(
-                                                      document,
+                                                  } else if (value == 'favorite') {
+                                                    _handleToggleFavorite(document);
+                                                  } else if (value == 'remove_from_app' || value == 'remove') {
+                                                    await DocumentActionDialogs.showRemoveFromAppConfirmation(
+                                                      context: context,
+                                                      document: document,
                                                     );
-                                                  } else if (value ==
-                                                      'remove') {
-                                                    _storageService
-                                                        .removeRecentDocument(
-                                                          document,
-                                                        );
+                                                  } else if (value == 'delete_permanently') {
+                                                    await DocumentActionDialogs.showDeletePermanentlyConfirmation(
+                                                      context: context,
+                                                      document: document,
+                                                    );
                                                   }
                                                 },
-                                                itemBuilder: (context) => [
-                                                  const PopupMenuItem(
-                                                    value: 'open',
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(
-                                                          Icons
-                                                              .visibility_outlined,
-                                                          size: 18,
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Text("Open Document"),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const PopupMenuItem(
-                                                    value: 'details',
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(
-                                                          Icons
-                                                              .info_outline_rounded,
-                                                          size: 18,
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Text(
-                                                          "Document Details",
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  PopupMenuItem(
-                                                    value: 'favorite',
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(
-                                                          isFav
-                                                              ? Icons
-                                                                    .star_outline_rounded
-                                                              : Icons
-                                                                    .star_rounded,
-                                                          size: 18,
-                                                          color: Colors.amber,
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Text(
-                                                          isFav
-                                                              ? "Remove Favorite"
-                                                              : "Add to Favorites",
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const PopupMenuItem(
-                                                    value: 'remove',
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(
-                                                          Icons.close_rounded,
-                                                          size: 18,
-                                                          color: Colors.grey,
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Text(
-                                                          "Remove from Recent",
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
+                                                itemBuilder: (context) =>
+                                                    DocumentActionDialogs.buildMenuItems(
+                                                  context: context,
+                                                  document: document,
+                                                  isSample: document.path.isEmpty,
+                                                  isFavorite: isFav,
+                                                ),
                                               ),
                                             ],
                                           ),

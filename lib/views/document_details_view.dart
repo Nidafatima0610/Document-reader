@@ -8,7 +8,10 @@ import 'package:all_documents_reader/views/ocr_workspace_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:all_documents_reader/services/document_save_service.dart';
+import 'package:all_documents_reader/widgets/document_action_dialogs.dart';
 import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
+import 'package:share_plus/share_plus.dart';
 
 class DocumentDetailsView extends StatefulWidget {
   final DocumentsModel document;
@@ -322,62 +325,75 @@ class _DocumentDetailsViewState extends State<DocumentDetailsView> {
     }
   }
 
-  void _confirmDelete() {
-    showDialog(
+  Future<void> _handleRemoveFromApp() async {
+    final removed = await DocumentActionDialogs.showRemoveFromAppDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.delete_outline_rounded, color: Colors.red),
-              SizedBox(width: 10),
-              Text("Delete Document"),
-            ],
-          ),
-          content: Text(
-            "Are you sure you want to permanently delete '${_currentDocument.name}'? This will remove it from all lists and history.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade700,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                final navigator = Navigator.of(context);
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                navigator.pop(); // Close dialog
-
-                // Execute delete across storage, favorites and recent
-                await _storageService.deleteDocument(_currentDocument);
-                widget.onDocumentDelete?.call(_currentDocument);
-
-                if (mounted) {
-                  navigator.pop(true); // Return to previous screen
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      content: Text("'${_currentDocument.name}' deleted"),
-                    ),
-                  );
-                }
-              },
-              child: const Text("Delete"),
-            ),
-          ],
-        );
+      document: _currentDocument,
+      onRemoved: () {
+        widget.onDocumentDelete?.call(_currentDocument);
       },
     );
+    if (removed == true && mounted) {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  Future<void> _handleDeletePermanently() async {
+    final deleted = await DocumentActionDialogs.showDeletePermanentlyDialog(
+      context: context,
+      document: _currentDocument,
+      onDeleted: () {
+        widget.onDocumentDelete?.call(_currentDocument);
+      },
+    );
+    if (deleted == true && mounted) {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  Future<void> _handleSaveToDevice() async {
+    if (_currentDocument.path.isEmpty || !File(_currentDocument.path).existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('File not found on device storage.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    await DocumentSaveService.instance.saveDocumentToDevice(
+      context: context,
+      sourceFile: File(_currentDocument.path),
+      defaultFileName: _currentDocument.name,
+    );
+  }
+
+  Future<void> _handleShare() async {
+    if (_currentDocument.path.isEmpty || !File(_currentDocument.path).existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('File not found on device storage.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    try {
+      // ignore: deprecated_member_use
+      await Share.shareXFiles(
+        [XFile(_currentDocument.path)],
+        text: _currentDocument.name,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not share document: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -411,6 +427,51 @@ class _DocumentDetailsViewState extends State<DocumentDetailsView> {
               );
             },
           ),
+          if (!isSample && File(_currentDocument.path).existsSync()) ...[
+            IconButton(
+              icon: const Icon(Icons.save_alt_rounded),
+              tooltip: "Save to Device",
+              onPressed: _handleSaveToDevice,
+            ),
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: "Share",
+              onPressed: _handleShare,
+            ),
+          ],
+          if (!isSample)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded),
+              onSelected: (value) {
+                if (value == 'remove') {
+                  _handleRemoveFromApp();
+                } else if (value == 'delete') {
+                  _handleDeletePermanently();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'remove',
+                  child: Row(
+                    children: [
+                      Icon(Icons.remove_circle_outline_rounded, size: 20),
+                      SizedBox(width: 10),
+                      Text('Remove from App'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_forever_rounded, color: Colors.red.shade700, size: 20),
+                      SizedBox(width: 10),
+                      Text('Delete File Permanently', style: TextStyle(color: Colors.red.shade700)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
       body: ListView(
@@ -811,24 +872,90 @@ class _DocumentDetailsViewState extends State<DocumentDetailsView> {
 
           const SizedBox(height: 24),
 
-          // 5. Danger Zone / Delete Button
-          if (!isSample)
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red.shade700,
-                side: BorderSide(color: Colors.red.shade300),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+          // 5. Danger Zone / Document Actions
+          if (!isSample) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF231920) : const Color(0xFFFFF5F5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? Colors.red.shade900.withValues(alpha: 0.5) : Colors.red.shade200,
                 ),
               ),
-              icon: const Icon(Icons.delete_outline_rounded, size: 20),
-              label: const Text(
-                "Delete Document",
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.shield_outlined, color: Colors.red.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Manage Document",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF2D2435),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Remove this document from the app history or delete its physical file permanently from your device storage.",
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark ? Colors.grey[300] : const Color(0xFF4A4458),
+                            side: BorderSide(
+                              color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.remove_circle_outline_rounded, size: 18),
+                          label: const Text(
+                            "Remove",
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          onPressed: _handleRemoveFromApp,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                          label: const Text(
+                            "Delete File",
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          onPressed: _handleDeletePermanently,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              onPressed: _confirmDelete,
             ),
+          ],
 
           const SizedBox(height: 40),
         ],

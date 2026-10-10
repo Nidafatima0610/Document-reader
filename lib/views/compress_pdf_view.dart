@@ -4,7 +4,7 @@ import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/pdf_operations_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
+import 'package:all_documents_reader/widgets/generated_pdf_success_sheet.dart';
 
 /// Screen allowing users to optimize and compress PDF document streams
 class CompressPdfView extends StatefulWidget {
@@ -106,127 +106,22 @@ class _CompressPdfViewState extends State<CompressPdfView> {
   }
 
   void _showResultDialog(DocumentsModel document, PdfCompressionResult result) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    showDialog(
+    GeneratedPdfSuccessSheet.show(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: (result.isReduced ? const Color(0xFF2E7D32) : Colors.orange)
-                    .withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                result.isReduced ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                color: result.isReduced ? const Color(0xFF2E7D32) : Colors.orange,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              result.isReduced ? 'Optimization Complete!' : 'Already Maximally Compressed',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF2D2435),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              result.isReduced
-                  ? 'File size reduced by ${result.savingsPercentage.toStringAsFixed(1)}% (${_formatBytes(result.bytesSaved)} saved).'
-                  : 'This PDF already uses maximum stream deflation. No unreferenced objects were found to safely trim.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Comparison box
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2C2536) : const Color(0xFFF3EDF9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Original Size:'),
-                      Text(
-                        _formatBytes(result.originalSizeBytes),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Optimized Size:'),
-                      Text(
-                        _formatBytes(result.compressedSizeBytes),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: result.isReduced ? const Color(0xFF2E7D32) : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await AdMobService.instance.showInterstitialAd(
-                context: context,
-                triggerReason: 'compress_pdf_done',
-              );
-              if (mounted) {
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Done'),
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.visibility_outlined, size: 18),
-            label: const Text('Open PDF'),
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              DocumentsStorageService.instance.recordDocumentOpened(document);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PdfViewerScreen(
-                    file: result.file,
-                    title: document.name,
-                    document: document,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+      document: document,
+      file: result.file,
+      subtitle: result.isReduced
+          ? 'Optimized: ${_formatBytes(result.originalSizeBytes)} ➔ ${_formatBytes(result.compressedSizeBytes)} (${result.savingsPercentage.toStringAsFixed(1)}% saved)'
+          : 'Optimized size: ${_formatBytes(result.compressedSizeBytes)}',
+      onDone: () async {
+        await AdMobService.instance.showInterstitialAd(
+          context: context,
+          triggerReason: 'compress_pdf_done',
+        );
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      },
     );
   }
 

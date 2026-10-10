@@ -5,7 +5,6 @@ import 'package:all_documents_reader/models/documents_model.dart';
 import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/pdf_operations_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:syncfusion_pdfviewer_platform_interface/pdfviewer_platform_interface.dart';
 
@@ -98,14 +97,7 @@ class PdfToImageService {
     if (outputDirectory != null) {
       targetDir = Directory('${outputDirectory.path}/PDF_Images_${pdfBaseName}_$timestamp');
     } else {
-      Directory baseDir;
-      try {
-        baseDir = await getApplicationDocumentsDirectory().timeout(
-          const Duration(seconds: 1),
-        );
-      } catch (_) {
-        baseDir = Directory.systemTemp;
-      }
+      final baseDir = await DocumentsStorageService.instance.getAppDocumentsDirectory();
       targetDir = Directory('${baseDir.path}/PDF_Images_${pdfBaseName}_$timestamp');
     }
 

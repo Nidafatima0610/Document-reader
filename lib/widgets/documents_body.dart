@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
 import 'package:all_documents_reader/widgets/banner_ad_widget.dart';
+import 'package:all_documents_reader/widgets/document_action_dialogs.dart';
 
 class DocumentsBody extends StatefulWidget {
   final List<DocumentsModel> documents;
@@ -440,52 +441,19 @@ class _DocumentsBodyState extends State<DocumentsBody> {
     }
   }
 
-  void _confirmDelete(DocumentsModel document) {
-    showDialog(
+  void _handleRemoveFromApp(DocumentsModel document) {
+    DocumentActionDialogs.showRemoveFromAppConfirmation(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.delete_outline_rounded, color: Colors.red),
-              SizedBox(width: 10),
-              Text("Delete Document"),
-            ],
-          ),
-          content: Text(
-            "Are you sure you want to remove '${document.name}' from your documents list?",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade700,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                widget.onDocumentDelete(document);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    content: Text("'${document.name}' deleted"),
-                  ),
-                );
-              },
-              child: const Text("Delete"),
-            ),
-          ],
-        );
-      },
+      document: document,
+      onRemoved: () => widget.onDocumentDelete(document),
+    );
+  }
+
+  void _handleDeletePermanently(DocumentsModel document) {
+    DocumentActionDialogs.showDeletePermanentlyConfirmation(
+      context: context,
+      document: document,
+      onDeleted: () => widget.onDocumentDelete(document),
     );
   }
 
@@ -954,79 +922,19 @@ class _DocumentsBodyState extends State<DocumentsBody> {
                                             );
                                           } else if (value == 'favorite') {
                                             _handleToggleFavorite(document);
-                                          } else if (value == 'delete') {
-                                            _confirmDelete(document);
+                                          } else if (value == 'remove_from_app' || value == 'delete') {
+                                            _handleRemoveFromApp(document);
+                                          } else if (value == 'delete_permanently') {
+                                            _handleDeletePermanently(document);
                                           }
                                         },
-                                        itemBuilder: (context) => [
-                                          const PopupMenuItem(
-                                            value: 'open',
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.visibility_outlined,
-                                                  size: 18,
-                                                ),
-                                                SizedBox(width: 8),
-                                                Text("Open Document"),
-                                              ],
-                                            ),
-                                          ),
-                                          const PopupMenuItem(
-                                            value: 'details',
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.info_outline_rounded,
-                                                  size: 18,
-                                                ),
-                                                SizedBox(width: 8),
-                                                Text("Document Details"),
-                                              ],
-                                            ),
-                                          ),
-                                          PopupMenuItem(
-                                            value: 'favorite',
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  isFav
-                                                      ? Icons
-                                                            .star_outline_rounded
-                                                      : Icons.star_rounded,
-                                                  size: 18,
-                                                  color: Colors.amber,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  isFav
-                                                      ? "Remove from Favorites"
-                                                      : "Add to Favorites",
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          if (!isSample)
-                                            const PopupMenuItem(
-                                              value: 'delete',
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.delete_outline,
-                                                    size: 18,
-                                                    color: Colors.red,
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Text(
-                                                    "Delete",
-                                                    style: TextStyle(
-                                                      color: Colors.red,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                        ],
+                                        itemBuilder: (context) =>
+                                            DocumentActionDialogs.buildMenuItems(
+                                          context: context,
+                                          document: document,
+                                          isSample: isSample,
+                                          isFavorite: isFav,
+                                        ),
                                       ),
                                     ],
                                   ),

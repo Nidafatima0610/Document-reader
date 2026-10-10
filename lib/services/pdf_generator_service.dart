@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 /// Encapsulates metadata and file reference for a newly generated PDF
@@ -107,15 +107,7 @@ class PdfGeneratorService {
       if (outputDirectory != null) {
         saveDir = outputDirectory;
       } else {
-        try {
-          saveDir = await getApplicationDocumentsDirectory()
-              .timeout(const Duration(seconds: 1));
-        } catch (e) {
-          debugPrint(
-            'Could not get application documents directory: $e, falling back to temp',
-          );
-          saveDir = Directory.systemTemp;
-        }
+        saveDir = await DocumentsStorageService.instance.getAppDocumentsDirectory();
       }
 
       if (!saveDir.existsSync()) {

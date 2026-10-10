@@ -7,6 +7,7 @@ import 'package:all_documents_reader/views/document_details_view.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
+import 'package:all_documents_reader/widgets/document_action_dialogs.dart';
 
 class FavoritesView extends StatefulWidget {
   final VoidCallback? onBrowseDocuments;
@@ -725,7 +726,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                                                   : Colors.grey[600],
                                               size: 20,
                                             ),
-                                            onSelected: (value) {
+                                            onSelected: (value) async {
                                               if (value == 'open') {
                                                 _openDocument(document);
                                               } else if (value == 'details') {
@@ -738,56 +739,27 @@ class _FavoritesViewState extends State<FavoritesView> {
                                                         ),
                                                   ),
                                                 );
-                                              } else if (value == 'remove') {
+                                              } else if (value == 'favorite' || value == 'remove') {
                                                 _removeFavorite(document);
+                                              } else if (value == 'remove_from_app') {
+                                                await DocumentActionDialogs.showRemoveFromAppConfirmation(
+                                                  context: context,
+                                                  document: document,
+                                                );
+                                              } else if (value == 'delete_permanently') {
+                                                await DocumentActionDialogs.showDeletePermanentlyConfirmation(
+                                                  context: context,
+                                                  document: document,
+                                                );
                                               }
                                             },
-                                            itemBuilder: (context) => const [
-                                              PopupMenuItem(
-                                                value: 'open',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.visibility_outlined,
-                                                      size: 18,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Text("Open Document"),
-                                                  ],
-                                                ),
-                                              ),
-                                              PopupMenuItem(
-                                                value: 'details',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons
-                                                          .info_outline_rounded,
-                                                      size: 18,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Text("Document Details"),
-                                                  ],
-                                                ),
-                                              ),
-                                              PopupMenuItem(
-                                                value: 'remove',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons
-                                                          .star_outline_rounded,
-                                                      size: 18,
-                                                      color: Colors.amber,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Text(
-                                                      "Remove from Favorites",
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
+                                            itemBuilder: (context) =>
+                                                DocumentActionDialogs.buildMenuItems(
+                                              context: context,
+                                              document: document,
+                                              isSample: _sampleDocuments.contains(document),
+                                              isFavorite: true,
+                                            ),
                                           ),
                                         ],
                                       ),

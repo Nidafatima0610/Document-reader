@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/pdf_operations_service.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 /// Configuration options for text-to-pdf generation
@@ -133,13 +133,7 @@ class TextToPdfService {
       if (outputDirectory != null) {
         saveDir = outputDirectory;
       } else {
-        try {
-          saveDir = await getApplicationDocumentsDirectory().timeout(
-            const Duration(seconds: 1),
-          );
-        } catch (_) {
-          saveDir = Directory.systemTemp;
-        }
+        saveDir = await DocumentsStorageService.instance.getAppDocumentsDirectory();
       }
 
       if (!saveDir.existsSync()) {

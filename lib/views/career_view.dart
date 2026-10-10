@@ -6,6 +6,8 @@ import 'package:all_documents_reader/views/career_cover_letter_view.dart';
 import 'package:all_documents_reader/views/career_reference_letter_view.dart';
 import 'package:all_documents_reader/views/career_resume_builder_view.dart';
 import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
+import 'package:all_documents_reader/services/document_save_service.dart';
+import 'package:all_documents_reader/widgets/document_action_dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -425,23 +427,101 @@ class CareerView extends StatelessWidget {
                               : const Color(0xFF786F80),
                         ),
                       ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.share_rounded, size: 18),
-                            color: AppTheme.primaryPurple,
-                            onPressed: () async {
-                              if (File(doc.path).existsSync()) {
-                                // ignore: deprecated_member_use
-                                await Share.shareXFiles(
-                                  [XFile(doc.path)],
-                                  subject: doc.name,
-                                );
-                              }
-                            },
+                      trailing: PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert_rounded, size: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        onSelected: (value) async {
+                          if (value == 'open') {
+                            _openDocument(context, doc);
+                          } else if (value == 'save') {
+                            if (File(doc.path).existsSync()) {
+                              await DocumentSaveService.instance.saveDocumentToDevice(
+                                context: context,
+                                sourceFile: File(doc.path),
+                                defaultFileName: doc.name,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("File '${doc.name}' not found on device."),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } else if (value == 'share') {
+                            if (File(doc.path).existsSync()) {
+                              // ignore: deprecated_member_use
+                              await Share.shareXFiles(
+                                [XFile(doc.path)],
+                                subject: doc.name,
+                              );
+                            }
+                          } else if (value == 'remove') {
+                            await DocumentActionDialogs.showRemoveFromAppDialog(
+                              context: context,
+                              document: doc,
+                            );
+                          } else if (value == 'delete') {
+                            await DocumentActionDialogs.showDeletePermanentlyDialog(
+                              context: context,
+                              document: doc,
+                            );
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'open',
+                            child: Row(
+                              children: [
+                                Icon(Icons.visibility_outlined, size: 20),
+                                SizedBox(width: 10),
+                                Text('Open'),
+                              ],
+                            ),
                           ),
-                          const Icon(Icons.chevron_right_rounded, size: 20),
+                          const PopupMenuItem(
+                            value: 'save',
+                            child: Row(
+                              children: [
+                                Icon(Icons.save_alt_rounded, size: 20),
+                                SizedBox(width: 10),
+                                Text('Save to Device'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'share',
+                            child: Row(
+                              children: [
+                                Icon(Icons.share_outlined, size: 20),
+                                SizedBox(width: 10),
+                                Text('Share'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem(
+                            value: 'remove',
+                            child: Row(
+                              children: [
+                                Icon(Icons.remove_circle_outline_rounded, size: 20),
+                                SizedBox(width: 10),
+                                Text('Remove from App'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_forever_rounded, color: Colors.red.shade700, size: 20),
+                                SizedBox(width: 10),
+                                Text('Delete File Permanently', style: TextStyle(color: Colors.red.shade700)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                       onTap: () => _openDocument(context, doc),

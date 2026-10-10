@@ -9,8 +9,10 @@ import 'package:all_documents_reader/services/pdf_generator_service.dart';
 import 'package:all_documents_reader/views/ai_document_assistant_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:all_documents_reader/services/document_save_service.dart';
 import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
 import 'package:all_documents_reader/views/smart_scanner_view.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// Results and post-scan actions view: View PDF, perform OCR, copy or save text
 class ScannerResultView extends StatefulWidget {
@@ -431,6 +433,66 @@ class _ScannerResultViewState extends State<ScannerResultView> {
                         elevation: 0,
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Save to Device & Share row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryColor,
+                            side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.save_alt_rounded, size: 18),
+                          label: const Text(
+                            'Save to Device',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          onPressed: () {
+                            DocumentSaveService.instance.saveDocumentToDevice(
+                              context: context,
+                              sourceFile: widget.pdfResult.file,
+                              defaultFileName: widget.document.name,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryColor,
+                            side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.share_rounded, size: 18),
+                          label: const Text(
+                            'Share',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          onPressed: () async {
+                            try {
+                              // ignore: deprecated_member_use
+                              await Share.shareXFiles(
+                                [XFile(widget.pdfResult.file.path)],
+                                text: widget.document.name,
+                              );
+                            } catch (e) {
+                              debugPrint('Share error: $e');
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

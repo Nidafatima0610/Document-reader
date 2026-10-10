@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:all_documents_reader/core/theme/app_theme.dart';
 import 'package:all_documents_reader/models/documents_model.dart';
+import 'package:all_documents_reader/services/document_save_service.dart';
 import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -220,6 +221,33 @@ class CareerDocumentPreviewView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 2,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    DocumentSaveService.instance.saveDocumentToDevice(
+                      context: context,
+                      sourceFile: file,
+                      defaultFileName: fileName,
+                    );
+                  },
+                  icon: const Icon(Icons.save_alt_rounded, size: 20),
+                  label: const Text(
+                    'Save to Device',
+                    style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryPurple,
+                    side: const BorderSide(color: AppTheme.primaryPurple, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),

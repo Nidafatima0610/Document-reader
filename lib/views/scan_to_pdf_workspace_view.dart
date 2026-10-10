@@ -4,12 +4,11 @@ import 'package:all_documents_reader/models/scanned_page_model.dart';
 import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/pdf_generator_service.dart';
 import 'package:all_documents_reader/services/scanner_image_processing_service.dart';
-import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
 import 'package:all_documents_reader/views/scan_to_pdf_camera_view.dart';
 import 'package:all_documents_reader/views/scan_to_pdf_editor_view.dart';
 import 'package:flutter/material.dart';
+import 'package:all_documents_reader/widgets/generated_pdf_success_sheet.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart';
 
 /// Central multi-page management workspace for the Scan to PDF feature.
 /// Supports multi-page capture, thumbnail reordering, per-page rotation & editing,
@@ -474,130 +473,13 @@ class _ScanToPdfWorkspaceViewState extends State<ScanToPdfWorkspaceView> {
   }
 
   void _showSuccessDialog(DocumentsModel document, PdfGenerationResult pdfResult) {
-    showModalBottomSheet(
+    GeneratedPdfSuccessSheet.show(
       context: context,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final theme = Theme.of(context);
-        final isDark = theme.brightness == Brightness.dark;
-
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1A24) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEDF7ED),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  color: Color(0xFF2E7D32),
-                  size: 48,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'PDF Created Successfully!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${document.name} • ${pdfResult.pageCount} pages • ${pdfResult.formattedSize}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  // Open PDF action
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7046A8),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PdfViewerScreen(
-                              file: pdfResult.file,
-                              title: document.name,
-                              document: document,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.chrome_reader_mode_rounded, size: 18),
-                      label: const Text(
-                        'Open PDF',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Share action
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF7046A8),
-                        side: const BorderSide(color: Color(0xFF7046A8)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      onPressed: () async {
-                        try {
-                          // ignore: deprecated_member_use
-                          await Share.shareXFiles(
-                            [XFile(document.path)],
-                            text: 'Scanned Document: ${document.name}',
-                          );
-                        } catch (e) {
-                          debugPrint('Share error: $e');
-                        }
-                      },
-                      icon: const Icon(Icons.share_rounded, size: 18),
-                      label: const Text(
-                        'Share',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Done action (returns to Tools / previous screen)
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx); // Close sheet
-                    Navigator.pop(context); // Exit workspace
-                  },
-                  child: const Text('Done & Return to Tools'),
-                ),
-              ),
-            ],
-          ),
-        );
+      document: document,
+      file: pdfResult.file,
+      subtitle: '${pdfResult.pageCount} pages • ${pdfResult.formattedSize}',
+      onDone: () {
+        Navigator.pop(context); // Exit workspace back to Tools
       },
     );
   }

@@ -7,8 +7,10 @@ import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/tools_registry_service.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:all_documents_reader/views/document_details_view.dart';
 import 'package:all_documents_reader/views/pdf_viewer_screen.dart';
 import 'package:all_documents_reader/widgets/banner_ad_widget.dart';
+import 'package:all_documents_reader/widgets/document_action_dialogs.dart';
 
 class HomeBody extends StatefulWidget {
   final VoidCallback? onSeeAllRecent;
@@ -659,6 +661,7 @@ class _HomeBodyState extends State<HomeBody> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _buildRecentItemTile(
+                    document: doc,
                     title: doc.name,
                     subtitle: "$ext File • $timeStr",
                     icon: icon,
@@ -751,6 +754,7 @@ class _HomeBodyState extends State<HomeBody> {
   }
 
   Widget _buildRecentItemTile({
+    required DocumentsModel document,
     required String title,
     required String subtitle,
     required IconData icon,
@@ -820,10 +824,47 @@ class _HomeBodyState extends State<HomeBody> {
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 13,
-                  color: isDark ? Colors.grey[500] : Colors.grey[400],
+                PopupMenuButton<String>(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    size: 20,
+                  ),
+                  onSelected: (value) async {
+                    if (value == 'open') {
+                      _openDocument(context, document);
+                    } else if (value == 'details') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DocumentDetailsView(
+                            document: document,
+                          ),
+                        ),
+                      );
+                    } else if (value == 'favorite') {
+                      await _storageService.toggleFavorite(document);
+                    } else if (value == 'remove_from_app') {
+                      await DocumentActionDialogs.showRemoveFromAppConfirmation(
+                        context: context,
+                        document: document,
+                      );
+                    } else if (value == 'delete_permanently') {
+                      await DocumentActionDialogs.showDeletePermanentlyConfirmation(
+                        context: context,
+                        document: document,
+                      );
+                    }
+                  },
+                  itemBuilder: (context) => DocumentActionDialogs.buildMenuItems(
+                    context: context,
+                    document: document,
+                    isSample: document.path.isEmpty,
+                    isFavorite: _storageService.isFavorite(document),
+                  ),
                 ),
               ],
             ),
