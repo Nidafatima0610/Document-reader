@@ -10,7 +10,7 @@ packages:
     source: hosted
     version: "1.1.1"
   archive:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: archive
       sha256: "6c5bcd986e06b94e3c40244af471750840a3d2341d1f9763a1100a14add517b4"
@@ -958,7 +958,7 @@ packages:
     source: hosted
     version: "34.2.9"
   syncfusion_flutter_signaturepad:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: syncfusion_flutter_signaturepad
       sha256: "8972eb172f4a1c5a181d5338096454cca798ea8ed18370e48f739ac3fc95905e"

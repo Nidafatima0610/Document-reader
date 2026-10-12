@@ -533,6 +533,98 @@ class PdfOperationsService {
     }
   }
 
+  /// Organizes PDF pages by reordering, rotating individual pages, and deleting omitted pages in one coordinated operation
+  Future<PdfOperationResult> organizePdfPages({
+    required String pdfPath,
+    required List<OrganizedPageSpec> pages,
+    String? customFileName,
+    Directory? outputDirectory,
+  }) async {
+    if (pages.isEmpty) {
+      throw ArgumentError('At least one page must be included.');
+    }
+
+    final file = File(pdfPath);
+    if (!file.existsSync()) {
+      throw FileSystemException('PDF file not found', pdfPath);
+    }
+
+    final bytes = await file.readAsBytes();
+    final srcDoc = PdfDocument(inputBytes: bytes);
+    final newDoc = PdfDocument();
+
+    try {
+      int added = 0;
+      for (final spec in pages) {
+        final pIdx = spec.originalPageNumber - 1;
+        if (pIdx >= 0 && pIdx < srcDoc.pages.count) {
+          final template = srcDoc.pages[pIdx].createTemplate();
+          final section = newDoc.sections!.add();
+          section.pageSettings.size = template.size;
+          section.pageSettings.margins.all = 0;
+          final newPage = section.pages.add();
+
+          if (spec.rotationAngle == 90) {
+            section.pageSettings.rotate = PdfPageRotateAngle.rotateAngle90;
+            newPage.rotation = PdfPageRotateAngle.rotateAngle90;
+          } else if (spec.rotationAngle == 180) {
+            section.pageSettings.rotate = PdfPageRotateAngle.rotateAngle180;
+            newPage.rotation = PdfPageRotateAngle.rotateAngle180;
+          } else if (spec.rotationAngle == 270) {
+            section.pageSettings.rotate = PdfPageRotateAngle.rotateAngle270;
+            newPage.rotation = PdfPageRotateAngle.rotateAngle270;
+          }
+
+          newPage.graphics.drawPdfTemplate(template, Offset.zero);
+          added++;
+        }
+      }
+
+      if (added == 0) {
+        throw ArgumentError('No valid pages found to organize.');
+      }
+
+      List<int> pdfBytes = await newDoc.save();
+
+      final hasRotations = pages.any((p) => p.rotationAngle % 360 != 0);
+      if (hasRotations) {
+        final rotDoc = PdfDocument(inputBytes: pdfBytes);
+        try {
+          for (int i = 0; i < pages.length && i < rotDoc.pages.count; i++) {
+            final angle = pages[i].rotationAngle % 360;
+            if (angle == 90) {
+              rotDoc.pages[i].rotation = PdfPageRotateAngle.rotateAngle90;
+            } else if (angle == 180) {
+              rotDoc.pages[i].rotation = PdfPageRotateAngle.rotateAngle180;
+            } else if (angle == 270) {
+              rotDoc.pages[i].rotation = PdfPageRotateAngle.rotateAngle270;
+            }
+          }
+          pdfBytes = await rotDoc.save();
+        } finally {
+          rotDoc.dispose();
+        }
+      }
+      final outputFile = await _saveBytesToOutputFile(
+        bytes: pdfBytes,
+        customName: customFileName,
+        defaultPrefix: 'Organized_PDF',
+        extension: 'pdf',
+        outputDirectory: outputDirectory,
+      );
+
+      return PdfOperationResult(
+        file: outputFile,
+        fileName: outputFile.path.split(RegExp(r'[/\\]')).last,
+        pageCount: added,
+        fileSizeBytes: pdfBytes.length,
+      );
+    } finally {
+      srcDoc.dispose();
+      newDoc.dispose();
+    }
+  }
+
   /// Internal helper to resolve save directory, sanitize unique filename, and write bytes
   Future<File> _saveBytesToOutputFile({
     required List<int> bytes,
@@ -580,3 +672,15 @@ class PdfOperationsService {
     return resultFile;
   }
 }
+
+/// Specification for an individual organized page
+class OrganizedPageSpec {
+  final int originalPageNumber; // 1-based
+  final int rotationAngle; // 0, 90, 180, 270
+
+  const OrganizedPageSpec({
+    required this.originalPageNumber,
+    this.rotationAngle = 0,
+  });
+}
+

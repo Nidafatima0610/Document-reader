@@ -961,20 +961,24 @@ void main() {
 
   test('ToolsRegistryService registers all tools including scan_to_pdf with working routes', () {
     final allDefinitions = ToolsRegistryService.instance.allRegisteredTools;
-    expect(allDefinitions.length, 17);
+    expect(allDefinitions.length, 21);
 
     final ids = allDefinitions.map((t) => t.id).toSet();
     expect(ids.contains('ai_document_assistant'), isTrue);
     expect(ids.contains('ocr_workspace'), isTrue);
     expect(ids.contains('smart_scanner'), isTrue);
     expect(ids.contains('scan_to_pdf'), isTrue);
+    expect(ids.contains('pdf_text_editor'), isTrue);
+    expect(ids.contains('smart_document_formatter'), isTrue);
+    expect(ids.contains('advanced_page_organizer'), isTrue);
+    expect(ids.contains('pdf_annotation_signature'), isTrue);
 
     final activeTools = ToolsRegistryService.instance.getAllTools();
     if (!AppConfig.isAiFeatureEnabled) {
-      expect(activeTools.length, 16);
+      expect(activeTools.length, 20);
       expect(activeTools.any((t) => t.id == 'ai_document_assistant'), isFalse);
     } else {
-      expect(activeTools.length, 17);
+      expect(activeTools.length, 21);
       expect(activeTools.any((t) => t.id == 'ai_document_assistant'), isTrue);
     }
 
@@ -1853,11 +1857,11 @@ Flutter, Dart, Mobile Architecture, State Management, Git, REST APIs
     expect(AppConfig.isAiFeatureEnabled, isFalse);
 
     final allTools = ToolsRegistryService.instance.allRegisteredTools;
-    expect(allTools.length, 17);
+    expect(allTools.length, 21);
     expect(allTools.any((t) => t.id == 'ai_document_assistant'), isTrue);
 
     final activeTools = ToolsRegistryService.instance.getAllTools();
-    expect(activeTools.length, 16);
+    expect(activeTools.length, 20);
     expect(activeTools.any((t) => t.id == 'ai_document_assistant'), isFalse);
   });
 

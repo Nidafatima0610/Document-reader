@@ -7,6 +7,9 @@ import 'package:all_documents_reader/services/document_save_service.dart';
 import 'package:all_documents_reader/widgets/document_action_dialogs.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:all_documents_reader/views/advanced_pdf_page_organizer_view.dart';
+import 'package:all_documents_reader/views/pdf_annotation_view.dart';
+import 'package:all_documents_reader/views/pdf_text_editor_view.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 /// Unified production PDF Viewer screen honoring user reading preferences,
@@ -253,6 +256,30 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                         case 'jump':
                           _showJumpToPageDialog();
                           break;
+                        case 'edit_text':
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PdfTextEditorView(initialPdfPath: widget.file.path),
+                            ),
+                          );
+                          break;
+                        case 'annotate':
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PdfAnnotationView(initialPdfPath: widget.file.path),
+                            ),
+                          );
+                          break;
+                        case 'organize':
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AdvancedPdfPageOrganizerView(initialPdfPath: widget.file.path),
+                            ),
+                          );
+                          break;
                         case 'save':
                           await DocumentSaveService.instance.saveDocumentToDevice(
                             context: context,
@@ -303,6 +330,36 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       }
                     },
                     itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit_text',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_document, size: 20),
+                            SizedBox(width: 10),
+                            Text('Edit PDF Text'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'annotate',
+                        child: Row(
+                          children: [
+                            Icon(Icons.draw_rounded, size: 20),
+                            SizedBox(width: 10),
+                            Text('Annotate & Sign'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'organize',
+                        child: Row(
+                          children: [
+                            Icon(Icons.dashboard_customize_rounded, size: 20),
+                            SizedBox(width: 10),
+                            Text('Organize Pages'),
+                          ],
+                        ),
+                      ),
                       const PopupMenuItem(
                         value: 'save',
                         child: Row(

@@ -14,6 +14,10 @@ import 'package:all_documents_reader/views/scan_to_pdf_workspace_view.dart';
 import 'package:all_documents_reader/views/smart_scanner_view.dart';
 import 'package:all_documents_reader/views/split_pdf_view.dart';
 import 'package:all_documents_reader/views/text_to_pdf_view.dart';
+import 'package:all_documents_reader/views/advanced_pdf_page_organizer_view.dart';
+import 'package:all_documents_reader/views/pdf_annotation_view.dart';
+import 'package:all_documents_reader/views/pdf_text_editor_view.dart';
+import 'package:all_documents_reader/views/smart_document_formatter_view.dart';
 import 'package:all_documents_reader/views/word_converter_view.dart';
 import 'package:flutter/material.dart';
 
@@ -103,6 +107,25 @@ class ToolsRegistryService {
         'Automatic multi-page pagination and layout flow',
         'Customizable font sizes and title header',
         'Export clean, ready-to-share PDF documents',
+      ],
+    ),
+    ToolItemModel(
+      id: 'smart_document_formatter',
+      title: 'Smart Formatter & Tables',
+      description: 'Build structured documents with headings, paragraphs, lists & tables',
+      category: ToolCategory.create,
+      icon: Icons.table_chart_rounded,
+      accentColor: const Color(0xFF7C3AED),
+      status: ToolStatus.available,
+      isPremium: false,
+      supportedInputFormats: const ['Text', 'Pasted', 'OCR'],
+      outputFormat: 'PDF',
+      routeBuilder: (context) => const SmartDocumentFormatterView(),
+      features: const [
+        'Structured headings (H1, H2) with styled divider lines',
+        'Configurable multi-page tables with interactive cell editor',
+        'Formatted paragraphs, bullet points, and clean typography',
+        'Live PDF preview before saving to storage',
       ],
     ),
 
@@ -362,6 +385,63 @@ class ToolsRegistryService {
         'One-tap delete unwanted pages',
         'Save reordered result to a new PDF file',
         'Integrated with Documents system',
+      ],
+    ),
+    ToolItemModel(
+      id: 'pdf_text_editor',
+      title: 'PDF Text Editor',
+      description: 'Edit text, replace blocks, and add custom text overlays on existing PDFs',
+      category: ToolCategory.managePdf,
+      icon: Icons.edit_document,
+      accentColor: const Color(0xFF6C4AB6),
+      status: ToolStatus.available,
+      isPremium: false,
+      supportedInputFormats: const ['PDF'],
+      outputFormat: 'PDF',
+      routeBuilder: (context) => const PdfTextEditorView(),
+      features: const [
+        'Select existing PDF and detect digital vs scanned text layers',
+        'Edit names, headings, dates, and paragraphs directly',
+        'Add text overlays with custom font size, color, and alignment',
+        'Safe preview, save as new PDF, and strict overwrite protection',
+      ],
+    ),
+    ToolItemModel(
+      id: 'advanced_page_organizer',
+      title: 'Page Organizer',
+      description: 'Visual grid: Reorder, rotate individual pages, extract & delete',
+      category: ToolCategory.managePdf,
+      icon: Icons.dashboard_customize_rounded,
+      accentColor: const Color(0xFF8E44AD),
+      status: ToolStatus.available,
+      isPremium: false,
+      supportedInputFormats: const ['PDF'],
+      outputFormat: 'PDF',
+      routeBuilder: (context) => const AdvancedPdfPageOrganizerView(),
+      features: const [
+        'Visual interactive page grid with page orientation badges',
+        'Rotate individual pages 90°, 180°, 270° clockwise per tap',
+        'Batch multi-selection, extraction into new PDF, and deletion',
+        'Smooth touch reordering with zero memory spikes',
+      ],
+    ),
+    ToolItemModel(
+      id: 'pdf_annotation_signature',
+      title: 'Annotate & Sign PDF',
+      description: 'Highlight text, add text notes, freehand draw, and place signatures',
+      category: ToolCategory.managePdf,
+      icon: Icons.draw_rounded,
+      accentColor: const Color(0xFF7046A8),
+      status: ToolStatus.available,
+      isPremium: false,
+      supportedInputFormats: const ['PDF'],
+      outputFormat: 'PDF',
+      routeBuilder: (context) => const PdfAnnotationView(),
+      features: const [
+        'Translucent highlight strips and text underline bars',
+        'Custom floating text comments and notes',
+        'Freehand pen markup with color and stroke controls',
+        'Handwritten signature canvas with multi-page coordinate placement',
       ],
     ),
   ];

@@ -3,7 +3,12 @@ import 'package:all_documents_reader/core/config/app_config.dart';
 import 'package:all_documents_reader/services/ocr_service.dart';
 import 'package:all_documents_reader/services/pdf_operations_service.dart';
 import 'package:all_documents_reader/services/pdf_to_image_service.dart';
+import 'package:all_documents_reader/models/documents_model.dart';
+import 'package:all_documents_reader/services/documents_storage_service.dart';
+import 'package:all_documents_reader/services/text_to_pdf_service.dart';
 import 'package:all_documents_reader/views/ai_document_assistant_view.dart';
+import 'package:all_documents_reader/views/smart_document_formatter_view.dart';
+import 'package:all_documents_reader/widgets/generated_pdf_success_sheet.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -325,6 +330,49 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
     );
   }
 
+  Future<void> _exportToPdfDirectly() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
+
+    try {
+      final res = await TextToPdfService.instance.generatePdfFromText(
+        text: text,
+        options: const TextToPdfOptions(title: 'OCR Extracted Document'),
+      );
+      final doc = DocumentsModel(
+        name: res.fileName,
+        path: res.file.path,
+        type: 'pdf',
+        createdAt: DateTime.now(),
+      );
+      await DocumentsStorageService.instance.addDocument(doc);
+      if (!mounted) return;
+      GeneratedPdfSuccessSheet.show(
+        context: context,
+        document: doc,
+        file: res.file,
+        subtitle: '${res.pageCount} pages • ${res.formattedSize}',
+        onDone: () {},
+      );
+    } catch (e) {
+      _showSnackBar('Failed to generate PDF: $e');
+    }
+  }
+
+  void _sendToSmartFormatter() {
+    final text = _textController.text.trim();
+    if (text.isEmpty) {
+      _showSnackBar('Please extract or enter text first.');
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SmartDocumentFormatterView(initialText: text),
+      ),
+    );
+  }
+
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -469,7 +517,7 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'On-device Latin script OCR engine. Processing is completely private and offline.',
+                      'On-device Latin OCR (offline & private). Recognition may make mistakes depending on lighting and font clarity. Review and edit text below.',
                       style: TextStyle(fontSize: 11, color: Color(0xFF7046A8)),
                     ),
                   ),
@@ -594,14 +642,14 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
 
               const SizedBox(height: 16),
 
-              // Bottom Actions: Save, Re-run, and Send to AI
+              // Primary Action Buttons
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _isSavedAsDoc ? null : _saveAsDocument,
-                      icon: Icon(_isSavedAsDoc ? Icons.check : Icons.save_rounded, size: 16),
-                      label: Text(_isSavedAsDoc ? 'Saved TXT' : 'Save as .TXT'),
+                      onPressed: _textController.text.isNotEmpty ? _sendToSmartFormatter : null,
+                      icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
+                      label: const Text('Format Document'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF7046A8),
                         foregroundColor: Colors.white,
@@ -611,16 +659,44 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _textController.text.isNotEmpty ? _exportToPdfDirectly : null,
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                      label: const Text('Export PDF'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isSavedAsDoc ? null : _saveAsDocument,
+                      icon: Icon(_isSavedAsDoc ? Icons.check : Icons.save_rounded, size: 16),
+                      label: Text(_isSavedAsDoc ? 'Saved TXT' : 'Save as .TXT'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
                   if (AppConfig.isAiFeatureEnabled) ...[
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: _textController.text.isNotEmpty ? _sendToAiAssistant : null,
                         icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                        label: const Text('AI Assistant'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7046A8),
-                          foregroundColor: Colors.white,
+                        label: const Text('AI Insights'),
+                        style: OutlinedButton.styleFrom(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
