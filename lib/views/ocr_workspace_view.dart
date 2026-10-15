@@ -4,6 +4,7 @@ import 'package:all_documents_reader/services/ocr_service.dart';
 import 'package:all_documents_reader/services/pdf_operations_service.dart';
 import 'package:all_documents_reader/services/pdf_to_image_service.dart';
 import 'package:all_documents_reader/models/documents_model.dart';
+import 'package:all_documents_reader/services/document_save_service.dart';
 import 'package:all_documents_reader/services/documents_storage_service.dart';
 import 'package:all_documents_reader/services/text_to_pdf_service.dart';
 import 'package:all_documents_reader/views/ai_document_assistant_view.dart';
@@ -78,17 +79,13 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
 
   Future<void> _pickImagesFromGallery() async {
     try {
-      final List<PlatformFile> pickedFiles = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'],
-      );
+      final List<XFile> pickedFiles = await _imagePicker.pickMultiImage();
 
       if (pickedFiles.isEmpty) return;
 
       final paths = pickedFiles
           .map((f) => f.path)
-          .where((p) => p != null && File(p).existsSync())
-          .cast<String>()
+          .where((p) => File(p).existsSync())
           .toList();
 
       if (paths.isNotEmpty) {
@@ -131,6 +128,11 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
 
       if (result.isEmpty || result.first.path == null) return;
       final path = result.first.path!;
+
+      if (!path.toLowerCase().endsWith('.pdf')) {
+        _showSnackBar('Please select a valid PDF document.');
+        return;
+      }
 
       if (File(path).existsSync()) {
         setState(() {
@@ -306,7 +308,23 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
 
       if (!mounted) return;
       setState(() => _isSavedAsDoc = true);
-      _showSnackBar('Saved "${doc.name}" to Documents!');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Saved "${doc.name}" to Documents'),
+          action: SnackBarAction(
+            label: 'Save to Device',
+            textColor: Colors.amberAccent,
+            onPressed: () {
+              DocumentSaveService.instance.saveDocumentToDevice(
+                context: context,
+                sourceFile: File(doc.path),
+                defaultFileName: doc.name,
+              );
+            },
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       _showSnackBar('Failed to save document: $e');
@@ -392,138 +410,162 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
     final surfaceColor = isDark ? const Color(0xFF1E1926) : Colors.white;
     final bgLight = isDark ? const Color(0xFF14101A) : const Color(0xFFF7F6FA);
 
-    return Scaffold(
-      backgroundColor: bgLight,
-      appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.document_scanner_rounded, size: 22),
-            SizedBox(width: 8),
-            Text('OCR Workspace'),
+    return PopScope(
+      canPop: _textController.text.trim().isEmpty,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final discard = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Discard Extracted Text?'),
+            content: const Text('You have text in the editor. Leaving now will discard your work.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep Editing')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Discard'),
+              ),
+            ],
+          ),
+        );
+        if (discard == true && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: bgLight,
+        appBar: AppBar(
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('OCR Workspace', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              Text('Extract text from camera, images & PDF', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Re-run OCR',
+              onPressed: _selectedSourcePaths.isNotEmpty && !_isRecognizing
+                  ? _processSelectedSources
+                  : null,
+            ),
+            if (AppConfig.isAiFeatureEnabled)
+              IconButton(
+                icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF9D65E5)),
+                tooltip: 'Analyze with AI',
+                onPressed: _textController.text.isNotEmpty ? _sendToAiAssistant : null,
+              ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Re-run OCR',
-            onPressed: _selectedSourcePaths.isNotEmpty && !_isRecognizing
-                ? _processSelectedSources
-                : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF9D65E5)),
-            tooltip: 'Analyze with AI',
-            onPressed: _textController.text.isNotEmpty ? _sendToAiAssistant : null,
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Source Picker Bar
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Select OCR Source:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _captureFromCamera,
-                          icon: const Icon(Icons.camera_alt_rounded, size: 16),
-                          label: const Text('Camera'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _pickImagesFromGallery,
-                          icon: const Icon(Icons.photo_library_rounded, size: 16),
-                          label: const Text('Images'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _pickPdfDocument,
-                          icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
-                          label: const Text('PDF'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_selectedSourcePaths.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      'Selected ${_selectedSourcePaths.length} item(s): ${_selectedSourcePaths.map((p) => p.split(RegExp(r'[/\\]')).last).join(', ')}',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Source Picker Bar
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: surfaceColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+                      blurRadius: 8,
                     ),
                   ],
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // 2. Engine Disclosure Note
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, size: 16, color: Color(0xFF7046A8)),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'On-device Latin OCR (offline & private). Recognition may make mistakes depending on lighting and font clarity. Review and edit text below.',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF7046A8)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Select OCR Source:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _captureFromCamera,
+                            icon: const Icon(Icons.camera_alt_rounded, size: 15),
+                            label: const Text('Scan with Camera', style: TextStyle(fontSize: 11.5)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _pickImagesFromGallery,
+                            icon: const Icon(Icons.photo_library_rounded, size: 15),
+                            label: const Text('Choose Image', style: TextStyle(fontSize: 11.5)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _pickPdfDocument,
+                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 15),
+                            label: const Text('Choose PDF', style: TextStyle(fontSize: 11.5)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_selectedSourcePaths.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        'Selected ${_selectedSourcePaths.length} item(s): ${_selectedSourcePaths.map((p) => p.split(RegExp(r'[/\\]')).last).join(', ')}',
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
+
+              const SizedBox(height: 16),
+
+              // 2. Engine Disclosure Note
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Color(0xFF7046A8)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'OCR extracts text characters and paragraphs from images and scans. It reconstructs the raw text content, but does not preserve complex original page layouts or graphics.',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF7046A8)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             const SizedBox(height: 16),
 
@@ -647,9 +689,9 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _textController.text.isNotEmpty ? _sendToSmartFormatter : null,
-                      icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
-                      label: const Text('Format Document'),
+                      onPressed: _textController.text.isNotEmpty ? _exportToPdfDirectly : null,
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                      label: const Text('Create PDF'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF7046A8),
                         foregroundColor: Colors.white,
@@ -662,9 +704,9 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _textController.text.isNotEmpty ? _exportToPdfDirectly : null,
-                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
-                      label: const Text('Export PDF'),
+                      onPressed: _textController.text.isNotEmpty && !_isSavedAsDoc ? _saveAsDocument : null,
+                      icon: Icon(_isSavedAsDoc ? Icons.check_circle_rounded : Icons.text_snippet_rounded, size: 16),
+                      label: Text(_isSavedAsDoc ? 'Saved TXT' : 'Save as TXT'),
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -679,9 +721,9 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _isSavedAsDoc ? null : _saveAsDocument,
-                      icon: Icon(_isSavedAsDoc ? Icons.check : Icons.save_rounded, size: 16),
-                      label: Text(_isSavedAsDoc ? 'Saved TXT' : 'Save as .TXT'),
+                      onPressed: _textController.text.isNotEmpty ? _sendToSmartFormatter : null,
+                      icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
+                      label: const Text('Format in Document Builder'),
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -689,21 +731,6 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
                       ),
                     ),
                   ),
-                  if (AppConfig.isAiFeatureEnabled) ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _textController.text.isNotEmpty ? _sendToAiAssistant : null,
-                        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                        label: const Text('AI Insights'),
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ],
@@ -712,6 +739,7 @@ class _OcrWorkspaceViewState extends State<OcrWorkspaceView> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

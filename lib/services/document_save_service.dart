@@ -54,14 +54,13 @@ class DocumentSaveService {
   static final DocumentSaveService instance = DocumentSaveService._internal();
   factory DocumentSaveService() => instance;
 
-  /// Prompts user to customize filename and uses Android Storage Access Framework
-  /// (FilePicker saveFile) to select destination and save PDF bytes.
-  Future<DocumentSaveResult> saveDocumentToDevice({
+  /// Convenience method delegating to [saveDocumentToDevice] for PDF files.
+  Future<DocumentSaveResult> savePdfToDevice({
     required BuildContext context,
     required File sourceFile,
     required String defaultFileName,
     DocumentsModel? document,
-  }) => savePdfToDevice(
+  }) => saveDocumentToDevice(
     context: context,
     sourceFile: sourceFile,
     defaultFileName: defaultFileName,
@@ -69,8 +68,8 @@ class DocumentSaveService {
   );
 
   /// Prompts user to customize filename and uses Android Storage Access Framework
-  /// (FilePicker saveFile) to select destination and save PDF bytes.
-  Future<DocumentSaveResult> savePdfToDevice({
+  /// (FilePicker saveFile) to select destination and save document bytes.
+  Future<DocumentSaveResult> saveDocumentToDevice({
     required BuildContext context,
     required File sourceFile,
     required String defaultFileName,
@@ -81,44 +80,61 @@ class DocumentSaveService {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             behavior: SnackBarBehavior.floating,
-            content: Text('Cannot save: Source PDF file not found on disk.'),
+            content: Text('Cannot save: Source file not found on disk.'),
           ),
         );
       }
       return DocumentSaveResult.failure('Source file does not exist.');
     }
 
+    // Determine target extension from sourceFile or defaultFileName
+    String ext = '';
+    if (defaultFileName.contains('.')) {
+      ext = defaultFileName.split('.').last.toLowerCase().trim();
+    } else if (sourceFile.path.contains('.')) {
+      ext = sourceFile.path.split('.').last.toLowerCase().trim();
+    }
+    if (ext.isEmpty) ext = 'pdf';
+
     // 1. Prepare sensible default filename
     var cleanName = defaultFileName.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    if (!cleanName.toLowerCase().endsWith('.pdf')) {
-      cleanName = '$cleanName.pdf';
+    if (!cleanName.toLowerCase().endsWith('.$ext')) {
+      cleanName = '$cleanName.$ext';
     }
 
     // 2. Prompt user with filename dialog allowing customization before system picker
     final chosenName = await _showFilenameDialog(context, cleanName);
     if (chosenName == null || chosenName.trim().isEmpty) {
-      // User cancelled filename dialog
       return DocumentSaveResult.cancelled();
     }
 
     var finalFileName = chosenName.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    if (!finalFileName.toLowerCase().endsWith('.pdf')) {
-      finalFileName = '$finalFileName.pdf';
+    if (!finalFileName.toLowerCase().endsWith('.$ext')) {
+      finalFileName = '$finalFileName.$ext';
     }
 
     try {
-      final Uint8List pdfBytes = await sourceFile.readAsBytes();
-      if (pdfBytes.isEmpty) {
-        throw const FormatException('PDF file is empty (0 bytes).');
+      final Uint8List docBytes = await sourceFile.readAsBytes();
+      if (docBytes.isEmpty) {
+        throw const FormatException('Document file is empty (0 bytes).');
+      }
+
+      String dialogTitle = 'Save Document to Device';
+      if (ext == 'pdf') {
+        dialogTitle = 'Save PDF to Device';
+      } else if (ext == 'docx' || ext == 'doc') {
+        dialogTitle = 'Save Word Document to Device';
+      } else if (ext == 'txt') {
+        dialogTitle = 'Save Text File to Device';
       }
 
       // 3. Open Android Storage Access Framework / System File Picker
       final Uri? selectedUri = await FilePicker.saveFile(
-        dialogTitle: 'Save PDF to Device',
+        dialogTitle: dialogTitle,
         fileName: finalFileName,
         type: FileType.custom,
-        allowedExtensions: ['pdf'],
-        bytes: pdfBytes,
+        allowedExtensions: [ext],
+        bytes: docBytes,
       );
 
       if (selectedUri == null) {
@@ -139,11 +155,11 @@ class DocumentSaveService {
       final targetFile = File(selectedPath);
       if (targetFile.existsSync()) {
         if (targetFile.lengthSync() == 0) {
-          await targetFile.writeAsBytes(pdfBytes, flush: true);
+          await targetFile.writeAsBytes(docBytes, flush: true);
         }
       } else {
         try {
-          await targetFile.writeAsBytes(pdfBytes, flush: true);
+          await targetFile.writeAsBytes(docBytes, flush: true);
         } catch (_) {
           // May be a content URI on Android handled directly by the plugin
         }
@@ -230,6 +246,7 @@ class DocumentSaveService {
   Future<String?> _showFilenameDialog(BuildContext context, String initialName) async {
     final textController = TextEditingController(text: initialName);
     final formKey = GlobalKey<FormState>();
+    final ext = initialName.contains('.') ? initialName.split('.').last.toLowerCase().trim() : 'pdf';
 
     return showDialog<String>(
       context: context,
@@ -253,7 +270,11 @@ class DocumentSaveService {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Choose a filename for the PDF document:',
+                  ext == 'docx' || ext == 'doc'
+                      ? 'Choose a filename for the Word document:'
+                      : ext == 'txt'
+                          ? 'Choose a filename for the text document:'
+                          : 'Choose a filename for the PDF document:',
                   style: TextStyle(
                     fontSize: 13,
                     color: isDark ? Colors.grey[300] : const Color(0xFF4A3A52),
@@ -264,7 +285,19 @@ class DocumentSaveService {
                   controller: textController,
                   autofocus: true,
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.red, size: 20),
+                    prefixIcon: Icon(
+                      ext == 'docx' || ext == 'doc'
+                          ? Icons.description_rounded
+                          : ext == 'txt'
+                              ? Icons.text_snippet_rounded
+                              : Icons.picture_as_pdf_rounded,
+                      color: ext == 'docx' || ext == 'doc'
+                          ? Colors.blue
+                          : ext == 'txt'
+                              ? Colors.teal
+                              : Colors.red,
+                      size: 20,
+                    ),
                     hintText: 'Document name...',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),

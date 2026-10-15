@@ -1119,7 +1119,7 @@ void main() {
     expect(find.text('Select PDF Files'), findsOneWidget);
   });
 
-  testWidgets('WordConverterView renders feasibility details and recommendations', (WidgetTester tester) async {
+  testWidgets('WordConverterView renders offline converter and guidelines', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -1133,9 +1133,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('PDF to Word'), findsWidgets);
-    expect(find.text('Enterprise / Cloud Engine Required'), findsOneWidget);
-    expect(find.text('Technical Feasibility Assessment'), findsOneWidget);
-    expect(find.text('Recommended Working Alternatives:'), findsOneWidget);
+    expect(find.text('Select PDF to Convert'), findsOneWidget);
+    expect(find.text('Select PDF'), findsOneWidget);
+    expect(find.text('How Offline Conversion Works'), findsOneWidget);
   });
 
   test('ScannedPageModel and DocumentFilterType behave correctly', () {
@@ -1508,14 +1508,14 @@ Flutter, Dart, Mobile Architecture, State Management, Git, REST APIs
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('OCR Workspace'), findsOneWidget);
-    expect(find.text('Camera'), findsOneWidget);
-    expect(find.text('Images'), findsOneWidget);
-    expect(find.text('PDF'), findsOneWidget);
+    expect(find.text('OCR Workspace'), findsWidgets);
+    expect(find.text('Scan with Camera'), findsOneWidget);
+    expect(find.text('Choose Image'), findsOneWidget);
+    expect(find.text('Choose PDF'), findsOneWidget);
     expect(find.byIcon(Icons.select_all_rounded), findsOneWidget);
     expect(find.byIcon(Icons.copy_rounded), findsOneWidget);
     expect(find.byIcon(Icons.clear_rounded), findsOneWidget);
-    expect(find.text('Save as .TXT'), findsOneWidget);
+    expect(find.text('Save as TXT'), findsOneWidget);
     if (AppConfig.isAiFeatureEnabled) {
       expect(find.text('AI Assistant'), findsOneWidget);
     } else {

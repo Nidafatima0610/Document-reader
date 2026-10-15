@@ -45,7 +45,7 @@ class DocumentConverterService {
 
       String? warning;
       if (textRes.isScannedOrEmpty) {
-        warning = 'This PDF appears to be scanned or image-only without digital text. OCR will be required for full text extraction.';
+        warning = 'This PDF consists of scanned or image-only pages without selectable digital text. Use the OCR Workspace to extract and reconstruct text.';
       }
 
       return ConversionAssessment(
@@ -131,31 +131,45 @@ class DocumentConverterService {
     // 2. Build OpenXML word/document.xml
     final xmlBuffer = StringBuffer();
     xmlBuffer.writeln('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
-    xmlBuffer.writeln('<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">');
+    xmlBuffer.writeln('<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">');
     xmlBuffer.writeln('<w:body>');
 
-    for (int i = 0; i < paragraphs.length; i++) {
-      final para = paragraphs[i];
-      final isHeading = para.length < 50 && !para.endsWith('.');
+    if (paragraphs.isEmpty) {
+      xmlBuffer.writeln('<w:p><w:r><w:t>Document converted from PDF with no selectable text layer.</w:t></w:r></w:p>');
+    } else {
+      for (int i = 0; i < paragraphs.length; i++) {
+        final para = paragraphs[i];
+        final isTitle = i == 0 && para.length < 60 && !para.contains('\n');
+        final isHeading = !isTitle && para.length < 50 && !para.endsWith('.') && !para.contains('  ');
 
-      xmlBuffer.writeln('<w:p>');
-      if (isHeading) {
-        xmlBuffer.writeln('<w:pPr><w:pStyle w:val="Heading1"/></w:pPr>');
+        xmlBuffer.writeln('<w:p>');
+        if (isTitle) {
+          xmlBuffer.writeln('<w:pPr><w:pStyle w:val="Title"/><w:jc w:val="center"/><w:spacing w:after="240"/></w:pPr>');
+          xmlBuffer.writeln('<w:r>');
+          xmlBuffer.writeln('<w:rPr><w:b/><w:sz w:val="36"/><w:color w:val="2D2435"/></w:rPr>');
+        } else if (isHeading) {
+          xmlBuffer.writeln('<w:pPr><w:pStyle w:val="Heading1"/><w:spacing w:before="240" w:after="120"/></w:pPr>');
+          xmlBuffer.writeln('<w:r>');
+          xmlBuffer.writeln('<w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="7046A8"/></w:rPr>');
+        } else {
+          xmlBuffer.writeln('<w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr>');
+          xmlBuffer.writeln('<w:r>');
+          xmlBuffer.writeln('<w:rPr><w:sz w:val="22"/><w:color w:val="2D2435"/></w:rPr>');
+        }
+
+        // XML escape
+        final escaped = _xmlEscape(para);
+        xmlBuffer.writeln('<w:t xml:space="preserve">$escaped</w:t>');
+        xmlBuffer.writeln('</w:r>');
+        xmlBuffer.writeln('</w:p>');
       }
-      xmlBuffer.writeln('<w:r>');
-      if (isHeading) {
-        xmlBuffer.writeln('<w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="7046A8"/></w:rPr>');
-      } else {
-        xmlBuffer.writeln('<w:rPr><w:sz w:val="24"/><w:color w:val="2D2435"/></w:rPr>');
-      }
-      // XML escape
-      final escaped = _xmlEscape(para);
-      xmlBuffer.writeln('<w:t xml:space="preserve">$escaped</w:t>');
-      xmlBuffer.writeln('</w:r>');
-      xmlBuffer.writeln('</w:p>');
     }
 
-    xmlBuffer.writeln('<w:sectPr/>');
+    // Page setup: Standard A4 (11906 x 16838 twips) with 1 inch (1440 twips) margins
+    xmlBuffer.writeln('<w:sectPr>');
+    xmlBuffer.writeln('  <w:pgSz w:w="11906" w:h="16838"/>');
+    xmlBuffer.writeln('  <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/>');
+    xmlBuffer.writeln('</w:sectPr>');
     xmlBuffer.writeln('</w:body>');
     xmlBuffer.writeln('</w:document>');
 
@@ -168,6 +182,7 @@ class DocumentConverterService {
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 </Types>''';
     archive.addFile(ArchiveFile('[Content_Types].xml', contentTypes.length, utf8.encode(contentTypes)));
 
@@ -177,6 +192,47 @@ class DocumentConverterService {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>''';
     archive.addFile(ArchiveFile('_rels/.rels', rels.length, utf8.encode(rels)));
+
+    // word/_rels/document.xml.rels
+    const docRels = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>''';
+    archive.addFile(ArchiveFile('word/_rels/document.xml.rels', docRels.length, utf8.encode(docRels)));
+
+    // word/styles.xml
+    const stylesXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+        <w:sz w:val="22"/>
+        <w:color w:val="2D2435"/>
+      </w:rPr>
+    </w:rPrDefault>
+  </w:docDefaults>
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading1">
+    <w:name w:val="heading 1"/>
+    <w:rPr>
+      <w:b/>
+      <w:sz w:val="28"/>
+      <w:color w:val="7046A8"/>
+    </w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Title">
+    <w:name w:val="Title"/>
+    <w:rPr>
+      <w:b/>
+      <w:sz w:val="36"/>
+      <w:color w:val="2D2435"/>
+    </w:rPr>
+  </w:style>
+</w:styles>''';
+    archive.addFile(ArchiveFile('word/styles.xml', stylesXml.length, utf8.encode(stylesXml)));
 
     // word/document.xml
     final docXmlBytes = utf8.encode(xmlBuffer.toString());
@@ -188,8 +244,9 @@ class DocumentConverterService {
 
     // Save to disk
     final saveDir = outputDirectory ?? await DocumentsStorageService.instance.getAppDocumentsDirectory();
-    final baseName = customFileName ?? file.path.split(RegExp(r'[/\\]')).last.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), '.docx');
-    final outFile = File('${saveDir.path}/$baseName');
+    final rawBase = customFileName ?? file.path.split(RegExp(r'[/\\]')).last.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), '.docx');
+    final cleanBase = rawBase.endsWith('.docx') ? rawBase : '$rawBase.docx';
+    final outFile = File('${saveDir.path}/$cleanBase');
     await outFile.writeAsBytes(docxBytes, flush: true);
 
     return outFile;
@@ -220,34 +277,67 @@ class DocumentConverterService {
     final sections = <FormatterSection>[];
     int secId = 1;
 
-    // Extract all paragraphs
-    final pRegex = RegExp(r'<w:p[\s>](.*?)</w:p>', dotAll: true);
+    // Pattern to iterate across paragraphs and tables in order
+    // Matches either <w:tbl>...</w:tbl> or <w:p>...</w:p>
+    final elementRegex = RegExp(r'(<w:tbl[\s>].*?</w:tbl>|<w:p[\s>].*?</w:p>)', dotAll: true);
     final textRegex = RegExp(r'<w:t[\s>](.*?)</w:t>', dotAll: true);
     final headingRegex = RegExp(r'<w:pStyle\s+w:val="(Heading1|Heading2|Title)"', caseSensitive: false);
 
-    for (final match in pRegex.allMatches(xmlContent)) {
-      final pXml = match.group(1) ?? '';
-      final tMatches = textRegex.allMatches(pXml);
-      final pText = tMatches.map((m) => _xmlUnescape(m.group(1) ?? '')).join('').trim();
+    for (final match in elementRegex.allMatches(xmlContent)) {
+      final chunk = match.group(0) ?? '';
 
-      if (pText.isEmpty) continue;
+      if (chunk.startsWith('<w:tbl')) {
+        // Parse Table: <w:tr> rows and <w:tc> cells
+        final rowRegex = RegExp(r'<w:tr[\s>](.*?)</w:tr>', dotAll: true);
+        final cellRegex = RegExp(r'<w:tc[\s>](.*?)</w:tc>', dotAll: true);
 
-      if (headingRegex.hasMatch(pXml)) {
-        sections.add(
-          FormatterSection(
-            id: '${secId++}',
-            type: DocumentSectionType.heading1,
-            text: pText,
-          ),
-        );
+        final tableMatrix = <List<String>>[];
+        for (final rowMatch in rowRegex.allMatches(chunk)) {
+          final rowXml = rowMatch.group(1) ?? '';
+          final rowCells = <String>[];
+          for (final cellMatch in cellRegex.allMatches(rowXml)) {
+            final cellXml = cellMatch.group(1) ?? '';
+            final cellTexts = textRegex.allMatches(cellXml).map((m) => _xmlUnescape(m.group(1) ?? '')).join(' ').trim();
+            rowCells.add(cellTexts.isNotEmpty ? cellTexts : ' ');
+          }
+          if (rowCells.isNotEmpty) {
+            tableMatrix.add(rowCells);
+          }
+        }
+
+        if (tableMatrix.isNotEmpty) {
+          sections.add(
+            FormatterSection(
+              id: '${secId++}',
+              type: DocumentSectionType.table,
+              tableData: tableMatrix,
+            ),
+          );
+        }
       } else {
-        sections.add(
-          FormatterSection(
-            id: '${secId++}',
-            type: DocumentSectionType.paragraph,
-            text: pText,
-          ),
-        );
+        // Parse Paragraph: <w:p>
+        final tMatches = textRegex.allMatches(chunk);
+        final pText = tMatches.map((m) => _xmlUnescape(m.group(1) ?? '')).join('').trim();
+
+        if (pText.isEmpty) continue;
+
+        if (headingRegex.hasMatch(chunk)) {
+          sections.add(
+            FormatterSection(
+              id: '${secId++}',
+              type: DocumentSectionType.heading1,
+              text: pText,
+            ),
+          );
+        } else {
+          sections.add(
+            FormatterSection(
+              id: '${secId++}',
+              type: DocumentSectionType.paragraph,
+              text: pText,
+            ),
+          );
+        }
       }
     }
 

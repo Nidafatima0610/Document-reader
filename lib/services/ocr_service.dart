@@ -47,19 +47,26 @@ class OcrService {
 
     try {
       final RecognizedText recognizedText = await recognizer.processImage(inputImage);
-      final String rawText = recognizedText.text;
 
+      final StringBuffer sb = StringBuffer();
       int lineCount = 0;
       for (final block in recognizedText.blocks) {
-        lineCount += block.lines.length;
+        for (final line in block.lines) {
+          sb.writeln(line.text);
+          lineCount++;
+        }
+        sb.writeln(); // Preserve paragraph breaks between distinct text blocks
       }
+
+      final String structuredText = sb.toString().trim();
+      final String rawText = structuredText.isNotEmpty ? structuredText : recognizedText.text.trim();
 
       return OcrResult(
         text: rawText,
         lineCount: lineCount,
         blockCount: recognizedText.blocks.length,
         imagePath: imagePath,
-        isEmpty: rawText.trim().isEmpty,
+        isEmpty: rawText.isEmpty,
       );
     } catch (e) {
       debugPrint('Error performing OCR: $e');

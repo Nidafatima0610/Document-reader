@@ -16,7 +16,7 @@ class SmartDocumentFormatterView extends StatefulWidget {
 }
 
 class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView> {
-  final TextEditingController _titleController = TextEditingController(text: 'Professional Report');
+  final TextEditingController _titleController = TextEditingController(text: 'Formatted Document');
   final TextEditingController _authorController = TextEditingController();
   final List<FormatterSection> _sections = [];
   bool _isGenerating = false;
@@ -26,44 +26,6 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
     super.initState();
     if (widget.initialText != null && widget.initialText!.trim().isNotEmpty) {
       _importRawText(widget.initialText!);
-    } else {
-      // Default initial professional structure
-      _sections.addAll([
-        FormatterSection(
-          id: '1',
-          type: DocumentSectionType.heading1,
-          text: 'Executive Summary',
-        ),
-        FormatterSection(
-          id: '2',
-          type: DocumentSectionType.paragraph,
-          text: 'This document presents a structured overview of key project findings, milestones, and deliverables.',
-        ),
-        FormatterSection(
-          id: '3',
-          type: DocumentSectionType.heading2,
-          text: 'Key Performance Metrics',
-        ),
-        FormatterSection(
-          id: '4',
-          type: DocumentSectionType.table,
-          tableData: [
-            ['Item', 'Quarter 1', 'Quarter 2', 'Status'],
-            ['Active Users', '12,500', '18,200', 'On Track'],
-            ['Retention Rate', '78%', '84%', 'Exceeded'],
-            ['System Uptime', '99.9%', '99.95%', 'Optimal'],
-          ],
-        ),
-        FormatterSection(
-          id: '5',
-          type: DocumentSectionType.bulletList,
-          listItems: [
-            'All core data verification stages completed successfully.',
-            'Optimized performance parameters across mobile targets.',
-            'Continuous monitoring active for deployment rollout.',
-          ],
-        ),
-      ]);
     }
   }
 
@@ -83,7 +45,7 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
       final clean = block.trim();
       if (clean.isEmpty) continue;
 
-      if (clean.startsWith('# ') || clean.length < 40 && !clean.contains('.')) {
+      if (clean.startsWith('# ') || (clean.length < 40 && !clean.contains('.'))) {
         _sections.add(
           FormatterSection(
             id: '${idCounter++}',
@@ -193,13 +155,72 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
     }
   }
 
+  void _editSection(int index) {
+    final sec = _sections[index];
+    switch (sec.type) {
+      case DocumentSectionType.heading1:
+      case DocumentSectionType.heading2:
+      case DocumentSectionType.title:
+        _showTextPromptDialog(
+          title: 'Edit ${sec.type == DocumentSectionType.heading1 ? "Heading (H1)" : "Subheading (H2)"}',
+          hint: 'Enter heading text...',
+          initialValue: sec.text,
+          onConfirm: (val) {
+            setState(() => sec.text = val);
+          },
+        );
+        break;
+
+      case DocumentSectionType.paragraph:
+        _showTextPromptDialog(
+          title: 'Edit Paragraph',
+          hint: 'Enter paragraph text...',
+          initialValue: sec.text,
+          maxLines: 6,
+          onConfirm: (val) {
+            setState(() => sec.text = val);
+          },
+        );
+        break;
+
+      case DocumentSectionType.bulletList:
+        _showTextPromptDialog(
+          title: 'Edit Bullet List',
+          hint: 'Enter items, one per line...',
+          initialValue: sec.listItems.join('\n'),
+          maxLines: 6,
+          onConfirm: (val) {
+            final items = val.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+            setState(() => sec.listItems = items);
+          },
+        );
+        break;
+
+      case DocumentSectionType.table:
+        _showTableEditorDialog(sec);
+        break;
+
+      case DocumentSectionType.divider:
+        break;
+    }
+  }
+
+  void _moveSection(int from, int to) {
+    if (to < 0 || to >= _sections.length) return;
+    setState(() {
+      final item = _sections.removeAt(from);
+      _sections.insert(to, item);
+    });
+  }
+
   void _showTextPromptDialog({
     required String title,
     required String hint,
+    String? initialValue,
     int maxLines = 1,
     required ValueChanged<String> onConfirm,
   }) {
-    final controller = TextEditingController();
+    final controller = TextEditingController(text: initialValue ?? '');
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -231,7 +252,7 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
                 onConfirm(text);
               }
             },
-            child: const Text('Add'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -247,7 +268,7 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Configure Table Builder', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          title: const Text('Create New Table', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -269,7 +290,7 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
                   const Text('Data Rows:'),
                   DropdownButton<int>(
                     value: rows,
-                    items: [2, 3, 4, 5, 6, 8, 10].map((r) => DropdownMenuItem(value: r, child: Text('$r Rows'))).toList(),
+                    items: [1, 2, 3, 4, 5, 6, 8, 10].map((r) => DropdownMenuItem(value: r, child: Text('$r Rows'))).toList(),
                     onChanged: (val) => setDialogState(() => rows = val ?? 3),
                   ),
                 ],
@@ -287,10 +308,10 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
                 Navigator.pop(dialogCtx);
                 final matrix = <List<String>>[];
                 // Header row
-                matrix.add(List.generate(cols, (c) => 'Header ${c + 1}'));
+                matrix.add(List.generate(cols, (c) => 'Column ${c + 1}'));
                 // Data rows
                 for (int r = 0; r < rows; r++) {
-                  matrix.add(List.generate(cols, (c) => 'Row ${r + 1}, Col ${c + 1}'));
+                  matrix.add(List.generate(cols, (c) => 'Data ${r + 1},${c + 1}'));
                 }
                 setState(() {
                   _sections.add(
@@ -310,70 +331,215 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
     );
   }
 
-  void _editTableMatrix(FormatterSection section) {
+  void _showTableEditorDialog(FormatterSection section) {
     final matrix = List<List<String>>.from(
       section.tableData.map((row) => List<String>.from(row)),
     );
 
+    if (matrix.isEmpty) {
+      matrix.add(['Column 1', 'Column 2']);
+      matrix.add(['Cell 1', 'Cell 2']);
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Edit Table Cells', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 340,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                child: DataTable(
-                  columns: List.generate(matrix.first.length, (c) {
-                    return DataColumn(
-                      label: Text(
-                        matrix.first[c],
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7046A8)),
-                      ),
-                    );
-                  }),
-                  rows: List.generate(matrix.length - 1, (rIndex) {
-                    final row = matrix[rIndex + 1];
-                    return DataRow(
-                      cells: List.generate(row.length, (cIndex) {
-                        return DataCell(
-                          Text(row[cIndex]),
-                          onTap: () {
-                            _editTableCellValue(row[cIndex], (newVal) {
-                              setDialogState(() {
-                                matrix[rIndex + 1][cIndex] = newVal;
-                              });
+        builder: (dialogCtx, setDialogState) {
+          final colCount = matrix.first.length;
+          final rowCount = matrix.length;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Edit Table', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  '$rowCount rows × $colCount cols',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF7046A8), fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 380,
+              child: Column(
+                children: [
+                  // Row & Column Editing Controls
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7046A8).withValues(alpha: 0.12),
+                            foregroundColor: const Color(0xFF7046A8),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                          onPressed: () {
+                            setDialogState(() {
+                              matrix.add(List.generate(colCount, (c) => 'Row $rowCount, Col ${c + 1}'));
                             });
                           },
-                        );
-                      }),
-                    );
-                  }),
-                ),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('+ Row', style: TextStyle(fontSize: 12)),
+                        ),
+                        const SizedBox(width: 6),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.withValues(alpha: 0.1),
+                            foregroundColor: Colors.red,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                          onPressed: rowCount > 2
+                              ? () {
+                                  setDialogState(() {
+                                    matrix.removeLast();
+                                  });
+                                }
+                              : null,
+                          icon: const Icon(Icons.remove, size: 16),
+                          label: const Text('- Row', style: TextStyle(fontSize: 12)),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7046A8).withValues(alpha: 0.12),
+                            foregroundColor: const Color(0xFF7046A8),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                          onPressed: colCount < 6
+                              ? () {
+                                  setDialogState(() {
+                                    matrix.first.add('Col ${colCount + 1}');
+                                    for (int r = 1; r < matrix.length; r++) {
+                                      matrix[r].add('Data $r,${colCount + 1}');
+                                    }
+                                  });
+                                }
+                              : null,
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('+ Col', style: TextStyle(fontSize: 12)),
+                        ),
+                        const SizedBox(width: 6),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.withValues(alpha: 0.1),
+                            foregroundColor: Colors.red,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                          onPressed: colCount > 2
+                              ? () {
+                                  setDialogState(() {
+                                    for (int r = 0; r < matrix.length; r++) {
+                                      matrix[r].removeLast();
+                                    }
+                                  });
+                                }
+                              : null,
+                          icon: const Icon(Icons.remove, size: 16),
+                          label: const Text('- Col', style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Tap any cell below to edit its text:',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Interactive Table Matrix
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SingleChildScrollView(
+                          child: DataTable(
+                            headingRowColor: WidgetStateProperty.all(const Color(0xFF7046A8).withValues(alpha: 0.1)),
+                            columns: List.generate(matrix.first.length, (c) {
+                              return DataColumn(
+                                label: InkWell(
+                                  onTap: () {
+                                    _editTableCellValue(matrix.first[c], (newVal) {
+                                      setDialogState(() {
+                                        matrix.first[c] = newVal;
+                                      });
+                                    });
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        matrix.first[c],
+                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7046A8)),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.edit, size: 12, color: Color(0xFF7046A8)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                            rows: List.generate(matrix.length - 1, (rIndex) {
+                              final row = matrix[rIndex + 1];
+                              return DataRow(
+                                cells: List.generate(row.length, (cIndex) {
+                                  return DataCell(
+                                    Row(
+                                      children: [
+                                        Text(row[cIndex]),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.edit, size: 11, color: Colors.grey),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      _editTableCellValue(row[cIndex], (newVal) {
+                                        setDialogState(() {
+                                          matrix[rIndex + 1][cIndex] = newVal;
+                                        });
+                                      });
+                                    },
+                                  );
+                                }),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7046A8), foregroundColor: Colors.white),
-              onPressed: () {
-                setState(() {
-                  section.tableData = matrix;
-                });
-                Navigator.pop(dialogCtx);
-              },
-              child: const Text('Save Cells'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7046A8), foregroundColor: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    section.tableData = matrix;
+                  });
+                  Navigator.pop(dialogCtx);
+                  _showSnackBar('Table updated');
+                },
+                child: const Text('Save Table'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -383,16 +549,17 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Cell Value', style: TextStyle(fontSize: 15)),
+        title: const Text('Edit Cell Text', style: TextStyle(fontSize: 15)),
         content: TextField(controller: controller, autofocus: true),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7046A8), foregroundColor: Colors.white),
             onPressed: () {
               Navigator.pop(ctx);
               onSaved(controller.text.trim());
             },
-            child: const Text('OK'),
+            child: const Text('Apply'),
           ),
         ],
       ),
@@ -401,7 +568,7 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
 
   Future<void> _generateAndPreviewPdf() async {
     if (_sections.isEmpty) {
-      _showSnackBar('Add at least one section to generate document.');
+      _showSnackBar('Add at least one section before generating PDF.');
       return;
     }
 
@@ -506,6 +673,47 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
     }
   }
 
+  Future<void> _saveDocumentDirectly() async {
+    if (_sections.isEmpty) {
+      _showSnackBar('Add at least one section before generating PDF.');
+      return;
+    }
+
+    setState(() => _isGenerating = true);
+
+    try {
+      final result = await SmartDocumentFormatterService.instance.generateFormattedPdf(
+        sections: _sections,
+        options: SmartFormatterOptions(
+          documentTitle: _titleController.text.trim().isEmpty ? 'Formatted Document' : _titleController.text.trim(),
+          author: _authorController.text.trim(),
+        ),
+      );
+
+      final doc = DocumentsModel(
+        name: result.fileName,
+        path: result.file.path,
+        type: 'pdf',
+        createdAt: DateTime.now(),
+      );
+      await DocumentsStorageService.instance.addDocument(doc);
+
+      setState(() => _isGenerating = false);
+      if (!mounted) return;
+
+      GeneratedPdfSuccessSheet.show(
+        context: context,
+        document: doc,
+        file: result.file,
+        subtitle: '${result.pageCount} pages • ${result.formattedSize}',
+        onDone: () => Navigator.pop(context),
+      );
+    } catch (e) {
+      setState(() => _isGenerating = false);
+      _showSnackBar('Document generation failed: $e');
+    }
+  }
+
   void _showSnackBar(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -519,20 +727,49 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
     final isDark = theme.brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF211C29) : Colors.white;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Smart Formatter & Tables'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.visibility_rounded),
-            tooltip: 'Preview PDF',
-            onPressed: _isGenerating ? null : _generateAndPreviewPdf,
+    return PopScope(
+      canPop: _sections.isEmpty,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final discard = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Discard Document?'),
+            content: Text('You have ${_sections.length} content block(s) in this document. Leaving now will discard your work.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep Editing')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Discard'),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+        );
+        if (discard == true && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Smart Formatter & Tables', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              Text('Create documents & tables as clean PDF', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.visibility_rounded),
+              tooltip: 'Preview PDF',
+              onPressed: _isGenerating || _sections.isEmpty ? null : _generateAndPreviewPdf,
+            ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
           // Document Header Configuration
           Card(
             color: cardBg,
@@ -590,47 +827,71 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
 
           const SizedBox(height: 16),
 
-          // Structured Section List
-          Text(
-            'Document Flow (${_sections.length} sections):',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
+          // Structured Section List or Clean Empty State
+          if (_sections.isEmpty)
+            _buildEmptyState(isDark, cardBg)
+          else ...[
+            Text(
+              'Document Flow (${_sections.length} sections):',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            ..._sections.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final sec = entry.value;
+              final isFirst = idx == 0;
+              final isLast = idx == _sections.length - 1;
 
-          ..._sections.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final sec = entry.value;
-            return Card(
-              color: cardBg,
-              margin: const EdgeInsets.only(bottom: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: ListTile(
-                leading: _getSectionIcon(sec.type),
-                title: Text(
-                  _getSectionTitle(sec),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13),
-                ),
-                subtitle: Text(sec.type.name.toUpperCase(), style: const TextStyle(fontSize: 10, color: Color(0xFF7046A8))),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (sec.type == DocumentSectionType.table)
+              return Card(
+                color: cardBg,
+                margin: const EdgeInsets.only(bottom: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: ListTile(
+                  leading: _getSectionIcon(sec.type),
+                  title: Text(
+                    _getSectionTitle(sec),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  subtitle: Text(
+                    _getSectionSubtitle(sec),
+                    style: const TextStyle(fontSize: 10, color: Color(0xFF7046A8), fontWeight: FontWeight.bold),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Move Up
                       IconButton(
-                        icon: const Icon(Icons.edit_calendar_rounded, color: Color(0xFF7046A8)),
-                        tooltip: 'Edit Table Cells',
-                        onPressed: () => _editTableMatrix(sec),
+                        icon: const Icon(Icons.arrow_upward_rounded, size: 18),
+                        tooltip: 'Move Up',
+                        onPressed: isFirst ? null : () => _moveSection(idx, idx - 1),
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                      onPressed: () => setState(() => _sections.removeAt(idx)),
-                    ),
-                  ],
+                      // Move Down
+                      IconButton(
+                        icon: const Icon(Icons.arrow_downward_rounded, size: 18),
+                        tooltip: 'Move Down',
+                        onPressed: isLast ? null : () => _moveSection(idx, idx + 1),
+                      ),
+                      // Edit Button (available on all non-divider blocks!)
+                      if (sec.type != DocumentSectionType.divider)
+                        IconButton(
+                          icon: const Icon(Icons.edit_rounded, color: Color(0xFF7046A8), size: 18),
+                          tooltip: 'Edit Section',
+                          onPressed: () => _editSection(idx),
+                        ),
+                      // Delete Button
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                        tooltip: 'Delete',
+                        onPressed: () => setState(() => _sections.removeAt(idx)),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ],
         ],
       ),
       bottomNavigationBar: Container(
@@ -646,25 +907,112 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
           ],
         ),
         child: SafeArea(
-          child: SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7046A8),
-                foregroundColor: Colors.white,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: OutlinedButton.icon(
+                  onPressed: _isGenerating || _sections.isEmpty ? null : _generateAndPreviewPdf,
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  label: const Text('Preview'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
               ),
-              onPressed: _isGenerating ? null : _generateAndPreviewPdf,
-              icon: _isGenerating
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.picture_as_pdf_rounded),
-              label: Text(
-                _isGenerating ? 'Compiling Document...' : 'Generate Formatted PDF',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 3,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7046A8),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: _isGenerating || _sections.isEmpty ? null : _saveDocumentDirectly,
+                  icon: _isGenerating
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                  label: Text(
+                    _sections.isEmpty
+                        ? 'Save as PDF'
+                        : _isGenerating
+                            ? 'Saving...'
+                            : 'Save as PDF (${_sections.length})',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
+      ),
+    ),
+  );
+}
+
+  Widget _buildEmptyState(bool isDark, Color cardBg) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF7046A8).withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: const Color(0xFF7046A8).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.post_add_rounded, size: 32, color: Color(0xFF7046A8)),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Start Building Your Document',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Compose clean, multi-page PDFs with headings, paragraphs, bullet lists, and tables.\nTap any option below to add your first block:',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12.5, color: Colors.grey[600], height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              ActionChip(
+                avatar: const Icon(Icons.format_size_rounded, size: 16, color: Color(0xFF7046A8)),
+                label: const Text('+ Heading'),
+                onPressed: () => _addSection(DocumentSectionType.heading1),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.notes_rounded, size: 16, color: Color(0xFF7046A8)),
+                label: const Text('+ Paragraph'),
+                onPressed: () => _addSection(DocumentSectionType.paragraph),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.table_chart_rounded, size: 16, color: Color(0xFF7046A8)),
+                label: const Text('+ Table'),
+                onPressed: () => _addSection(DocumentSectionType.table),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.format_list_bulleted_rounded, size: 16, color: Color(0xFF7046A8)),
+                label: const Text('+ Bullets'),
+                onPressed: () => _addSection(DocumentSectionType.bulletList),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -710,6 +1058,27 @@ class _SmartDocumentFormatterViewState extends State<SmartDocumentFormatterView>
         return '$r rows × $c columns table';
       case DocumentSectionType.divider:
         return 'Horizontal Page Separator';
+    }
+  }
+
+  String _getSectionSubtitle(FormatterSection sec) {
+    switch (sec.type) {
+      case DocumentSectionType.heading1:
+        return 'HEADING 1';
+      case DocumentSectionType.heading2:
+        return 'HEADING 2';
+      case DocumentSectionType.paragraph:
+        return 'PARAGRAPH';
+      case DocumentSectionType.bulletList:
+        return 'BULLET LIST (${sec.listItems.length} items)';
+      case DocumentSectionType.table:
+        final r = sec.tableData.length;
+        final c = sec.tableData.isNotEmpty ? sec.tableData.first.length : 0;
+        return 'TABLE ($r×$c)';
+      case DocumentSectionType.divider:
+        return 'DIVIDER LINE';
+      case DocumentSectionType.title:
+        return 'TITLE';
     }
   }
 }

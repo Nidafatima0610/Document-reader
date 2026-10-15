@@ -82,16 +82,26 @@ class SmartDocumentFormatterService {
 
       // 1. Document Title
       if (options.documentTitle.isNotEmpty) {
-        page.graphics.drawString(
-          options.documentTitle,
-          titleFont,
+        final titleElement = PdfTextElement(
+          text: options.documentTitle,
+          font: titleFont,
           brush: PdfSolidBrush(PdfColor(45, 36, 53)),
-          bounds: Rect.fromLTWH(0, currentY, pageWidth, 28),
         );
-        currentY += 30;
+        final titleRes = titleElement.draw(
+          page: page,
+          bounds: Rect.fromLTWH(0, currentY, pageWidth, pageHeight - currentY),
+          format: PdfLayoutFormat(layoutType: PdfLayoutType.paginate),
+        );
+        if (titleRes != null) {
+          page = titleRes.page;
+          currentY = titleRes.bounds.bottom + 6;
+        }
 
         // Subtitle / Author / Date
         final metaParts = <String>[];
+        if (options.subtitle != null && options.subtitle!.isNotEmpty) {
+          metaParts.add(options.subtitle!);
+        }
         if (options.author != null && options.author!.isNotEmpty) {
           metaParts.add('Author: ${options.author}');
         }
@@ -99,13 +109,20 @@ class SmartDocumentFormatterService {
           metaParts.add('Date: ${DateTime.now().toLocal().toString().split(' ')[0]}');
         }
         if (metaParts.isNotEmpty) {
-          page.graphics.drawString(
-            metaParts.join('  •  '),
-            metaFont,
+          final metaElement = PdfTextElement(
+            text: metaParts.join('  •  '),
+            font: metaFont,
             brush: PdfSolidBrush(PdfColor(110, 100, 125)),
-            bounds: Rect.fromLTWH(0, currentY, pageWidth, 16),
           );
-          currentY += 18;
+          final metaRes = metaElement.draw(
+            page: page,
+            bounds: Rect.fromLTWH(0, currentY, pageWidth, pageHeight - currentY),
+            format: PdfLayoutFormat(layoutType: PdfLayoutType.paginate),
+          );
+          if (metaRes != null) {
+            page = metaRes.page;
+            currentY = metaRes.bounds.bottom + 8;
+          }
         }
 
         // Stylish Divider line
@@ -114,48 +131,73 @@ class SmartDocumentFormatterService {
           Offset(0, currentY),
           Offset(pageWidth, currentY),
         );
-        currentY += 16;
+        currentY += 14;
       }
 
       // 2. Render Sections
       for (final sec in sections) {
-        // Check if we need a new page for upcoming content
-        if (currentY > pageHeight - 60) {
+        // Prevent orphan headings at the very bottom of the page
+        if ((sec.type == DocumentSectionType.heading1 || sec.type == DocumentSectionType.heading2 || sec.type == DocumentSectionType.title) &&
+            currentY > pageHeight - 55) {
+          page = doc.pages.add();
+          currentY = 0;
+        } else if (currentY > pageHeight - 35) {
           page = doc.pages.add();
           currentY = 0;
         }
 
         switch (sec.type) {
           case DocumentSectionType.title:
-            page.graphics.drawString(
-              sec.text,
-              titleFont,
+            final titleEl = PdfTextElement(
+              text: sec.text,
+              font: titleFont,
               brush: PdfSolidBrush(PdfColor(45, 36, 53)),
-              bounds: Rect.fromLTWH(0, currentY, pageWidth, 26),
             );
-            currentY += 30;
+            final res = titleEl.draw(
+              page: page,
+              bounds: Rect.fromLTWH(0, currentY, pageWidth, pageHeight - currentY),
+              format: PdfLayoutFormat(layoutType: PdfLayoutType.paginate),
+            );
+            if (res != null) {
+              page = res.page;
+              currentY = res.bounds.bottom + 12;
+            }
             break;
 
           case DocumentSectionType.heading1:
-            currentY += 6;
-            page.graphics.drawString(
-              sec.text,
-              h1Font,
+            currentY += 4;
+            final h1El = PdfTextElement(
+              text: sec.text,
+              font: h1Font,
               brush: PdfSolidBrush(PdfColor(112, 70, 168)),
-              bounds: Rect.fromLTWH(0, currentY, pageWidth, 22),
             );
-            currentY += 24;
+            final res = h1El.draw(
+              page: page,
+              bounds: Rect.fromLTWH(0, currentY, pageWidth, pageHeight - currentY),
+              format: PdfLayoutFormat(layoutType: PdfLayoutType.paginate),
+            );
+            if (res != null) {
+              page = res.page;
+              currentY = res.bounds.bottom + 8;
+            }
             break;
 
           case DocumentSectionType.heading2:
-            currentY += 4;
-            page.graphics.drawString(
-              sec.text,
-              h2Font,
+            currentY += 2;
+            final h2El = PdfTextElement(
+              text: sec.text,
+              font: h2Font,
               brush: PdfSolidBrush(PdfColor(60, 50, 70)),
-              bounds: Rect.fromLTWH(0, currentY, pageWidth, 18),
             );
-            currentY += 20;
+            final res = h2El.draw(
+              page: page,
+              bounds: Rect.fromLTWH(0, currentY, pageWidth, pageHeight - currentY),
+              format: PdfLayoutFormat(layoutType: PdfLayoutType.paginate),
+            );
+            if (res != null) {
+              page = res.page;
+              currentY = res.bounds.bottom + 6;
+            }
             break;
 
           case DocumentSectionType.paragraph:
@@ -187,7 +229,7 @@ class SmartDocumentFormatterService {
                 '•',
                 bodyFont,
                 brush: PdfSolidBrush(PdfColor(112, 70, 168)),
-                bounds: Rect.fromLTWH(8, currentY, 15, 16),
+                bounds: Rect.fromLTWH(6, currentY, 15, 16),
               );
               // Draw text
               final itemEl = PdfTextElement(
@@ -197,7 +239,7 @@ class SmartDocumentFormatterService {
               );
               final itemRes = itemEl.draw(
                 page: page,
-                bounds: Rect.fromLTWH(24, currentY, pageWidth - 24, pageHeight - currentY),
+                bounds: Rect.fromLTWH(22, currentY, pageWidth - 22, pageHeight - currentY),
                 format: PdfLayoutFormat(layoutType: PdfLayoutType.paginate),
               );
               if (itemRes != null) {
